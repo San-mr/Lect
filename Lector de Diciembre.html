@@ -1,0 +1,1502 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Lector de Diciembre</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Instrument+Serif:ital@0;1&display=swap">
+<style>/* Lector oscuro. Diseño: lectura de noche, papel de tinta azulada, acento hielo (Antes) y brasa (Después). */
+:root {
+  --ink: #0a0b12;
+  --panel: #12141f;
+  --panel2: #1a1d2c;
+  --line: rgba(255, 255, 255, .10);
+  --text: #ece9e2;
+  --dim: #a7a9b8;
+  --faint: #6f7287;
+  --antes: #9fd0ff;
+  --despues: #ffae7a;
+  --accent: var(--antes);
+  --veil: .80;
+  --fs: 21px;
+  --lh: 1.75;
+  --body: 'Atkinson Hyperlegible', 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--body); -webkit-text-size-adjust: 100%; overflow: hidden; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+.app { position: relative; height: 100%; overflow: hidden; }
+
+/* ---------- fondo de escena ---------- */
+.stage { position: absolute; inset: 0; z-index: 0; }
+.sc { position: absolute; inset: 0; opacity: 0; transition: opacity 1.1s ease; transform: scale(1.04); }
+.sc.on { opacity: 1; }
+.sc svg { width: 100%; height: 100%; display: block; filter: blur(2.2px) saturate(.9); }
+.veil { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(6, 7, 12, calc(var(--veil) + .12)) 0, rgba(6, 7, 12, var(--veil)) 18%, rgba(6, 7, 12, var(--veil)) 70%, rgba(6, 7, 12, calc(var(--veil) + .14)) 100%); }
+.no-scene .stage { display: none; }
+.no-scene .veil { background: var(--ink); }
+
+/* ---------- barra superior ---------- */
+.top { position: absolute; z-index: 5; inset: 0 0 auto 0; display: flex; align-items: center; gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) 8px max(10px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(to bottom, rgba(6, 7, 12, .9), rgba(6, 7, 12, 0)); transition: transform .3s ease, opacity .3s ease; }
+.top .mid { flex: 1; min-width: 0; text-align: center; font-size: 13px; color: var(--dim); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top .mid b { color: var(--text); font-weight: 700; }
+.ibtn { width: 44px; height: 44px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 12px; cursor: pointer; color: var(--text); }
+.ibtn:hover { background: rgba(255, 255, 255, .08); }
+.ibtn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.chrome-hidden .top { transform: translateY(-100%); opacity: 0; }
+.chrome-hidden .bar { transform: translateY(100%); opacity: 0; }
+
+/* ---------- lectura ---------- */
+.reader { position: absolute; inset: 0; z-index: 2; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: auto;
+  padding: calc(76px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(150px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.page { max-width: 42rem; margin: 0 auto; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--accent); border-radius: 2px; }
+.ctitle { font-family: var(--display); font-weight: 400; font-size: clamp(44px, 9vw, 68px); line-height: 1; margin: 10px 0 6px; letter-spacing: -.01em; text-wrap: balance; }
+.csub { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--dim); font-size: 14px; margin-bottom: 30px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, .04); color: var(--text); font-size: 13px; }
+.chip svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 2; }
+.tag { color: var(--faint); font-size: 13px; font-style: italic; }
+
+.txt p { margin: 0 0 1.05em; font-size: var(--fs); line-height: var(--lh); hyphens: manual; overflow-wrap: break-word; }
+.txt p.d { padding-left: 0; }
+.who { display: inline-block; font-weight: 700; margin-right: .38em; font-size: .86em; letter-spacing: .01em; color: var(--c, var(--accent)); }
+.who.guess { opacity: .68; }
+.hide-names .who { display: none; }
+.txt p.note { font-size: calc(var(--fs) * .84); color: var(--dim); font-style: italic; border-left: 2px solid var(--line); padding-left: 14px; }
+.txt p.note::before { content: "Nota de la autora"; display: block; font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-bottom: 4px; }
+.end { margin: 46px 0 0; padding-top: 24px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; color: var(--dim); font-size: 14px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; font-weight: 700; font-size: 15px; }
+.btn:hover { background: #222638; }
+.btn.pri { background: var(--accent); color: #0b0d14; border-color: transparent; }
+.btn.pri:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .4; cursor: default; }
+
+/* ---------- barra inferior ---------- */
+.bar { position: absolute; z-index: 5; inset: auto 0 0 0; padding: 40px max(14px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(to top, rgba(6, 7, 12, .97) 62%, rgba(6, 7, 12, 0)); transition: transform .3s ease, opacity .3s ease; }
+.bar-in { max-width: 46rem; margin: 0 auto; display: flex; align-items: center; gap: 6px; }
+.slider { position: relative; flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; }
+.ticks { position: absolute; left: 0; right: 0; top: 50%; height: 0; pointer-events: none; }
+.tick { position: absolute; top: -9px; width: 2px; height: 18px; background: rgba(255, 255, 255, .22); border-radius: 2px; transform: translateX(-1px); }
+.tick.part { top: -12px; height: 24px; width: 3px; background: var(--despues); }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; margin: 0; position: relative; z-index: 1; cursor: pointer; --p: 0%; }
+input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(to right, var(--accent) var(--p), rgba(255, 255, 255, .16) var(--p)); }
+input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, .16); }
+input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); margin-top: -8px; box-shadow: 0 2px 10px rgba(0, 0, 0, .5); }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); box-shadow: 0 2px 10px rgba(0, 0, 0, .5); }
+.read { position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translateX(-50%); max-width: 92%; padding: 8px 12px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-size: 13px; color: var(--dim); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s; }
+.read b { color: var(--text); }
+.bar.drag .read { opacity: 1; }
+.meta { max-width: 46rem; margin: 0 auto; padding: 0 56px; text-align: center; font-size: 12.5px; color: var(--faint); letter-spacing: .02em; }
+
+/* ---------- paneles ---------- */
+.sheet-bg { position: absolute; inset: 0; z-index: 20; background: rgba(0, 0, 0, .55); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.sheet-bg.on { opacity: 1; pointer-events: auto; }
+.sheet { position: absolute; z-index: 21; top: 0; bottom: 0; width: min(92vw, 400px); background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; transition: transform .28s cubic-bezier(.2, .8, .2, 1);
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet.left { left: 0; transform: translateX(-102%); padding-left: env(safe-area-inset-left, 0px); }
+.sheet.right { right: 0; transform: translateX(102%); border-right: 0; border-left: 1px solid var(--line); padding-right: env(safe-area-inset-right, 0px); }
+.sheet.on { transform: none; }
+.sh-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 8px 8px 18px; border-bottom: 1px solid var(--line); }
+.sh-head h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 30px; }
+.sh-body { overflow-y: auto; padding: 8px 0 24px; flex: 1; }
+.toc-part { padding: 18px 18px 6px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.toc-part.antes { color: var(--antes); } .toc-part.despues { color: var(--despues); }
+.toc-part button { font-size: 12px; letter-spacing: .02em; text-transform: none; font-weight: 700; padding: 6px 10px; min-height: 32px; border-radius: 8px; border: 1px solid var(--line); background: transparent; cursor: pointer; }
+.toc-ch { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 10px 18px; cursor: pointer; border-radius: 0; display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+.toc-ch:hover { background: rgba(255, 255, 255, .05); }
+.toc-ch.cur { background: rgba(255, 255, 255, .08); box-shadow: inset 3px 0 0 var(--accent); }
+.toc-ch .n { font-weight: 700; font-size: 16px; }
+.toc-ch .s { color: var(--faint); font-size: 12.5px; white-space: nowrap; }
+.toc-pg { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 18px 12px 18px; }
+.toc-pg button { min-width: 44px; min-height: 36px; padding: 0 10px; border: 1px solid var(--line); background: transparent; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--dim); }
+.toc-pg button.cur { background: var(--accent); color: #0b0d14; border-color: transparent; font-weight: 700; }
+.toc-pg button:hover:not(.cur) { background: rgba(255, 255, 255, .07); }
+.empty-note { padding: 8px 18px 14px; color: var(--faint); font-size: 14px; }
+
+.set-row { padding: 14px 18px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.set-row label, .set-row .lbl { font-size: 14px; color: var(--dim); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.set-row .lbl b { color: var(--text); font-weight: 700; }
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; min-height: 40px; border: 1px solid var(--line); background: transparent; border-radius: 10px; cursor: pointer; font-size: 14px; color: var(--dim); }
+.seg button.on { background: var(--accent); color: #0b0d14; border-color: transparent; font-weight: 700; }
+.sw { position: relative; width: 48px; height: 28px; flex: none; }
+.sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; width: 100%; height: 100%; }
+.sw i { position: absolute; inset: 0; border-radius: 999px; background: rgba(255, 255, 255, .16); transition: background .2s; }
+.sw i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.sw input:checked + i { background: var(--accent); }
+.sw input:checked + i::after { transform: translateX(20px); }
+.sw input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+.set-row input[type=range] { height: 32px; }
+
+/* ---------- carga ---------- */
+.loader { position: absolute; inset: 0; z-index: 30; overflow-y: auto; background: radial-gradient(1200px 700px at 20% -10%, #1a2140 0, transparent 60%), radial-gradient(900px 600px at 110% 110%, #3a2230 0, transparent 55%), var(--ink);
+  padding: calc(40px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); }
+.loader[hidden] { display: none; }
+.ld { max-width: 52rem; margin: 0 auto; }
+.ld h1 { font-family: var(--display); font-weight: 400; font-size: clamp(46px, 9vw, 84px); line-height: .96; margin: 0 0 14px; letter-spacing: -.015em; }
+.ld h1 em { font-style: italic; color: var(--antes); } .ld h1 span { color: var(--despues); font-style: italic; }
+.ld .lead { color: var(--dim); font-size: 17px; line-height: 1.6; max-width: 36rem; margin: 0 0 30px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.card h2 { margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
+.card.antes h2 { color: var(--antes); } .card.despues h2 { color: var(--despues); }
+.card .t { font-family: var(--display); font-size: 30px; line-height: 1.05; }
+.card .st { color: var(--dim); font-size: 14px; }
+.card .st.ok { color: #9be3b0; }
+.drop { border: 1.5px dashed rgba(255, 255, 255, .22); border-radius: 12px; padding: 18px; text-align: center; color: var(--dim); font-size: 14px; cursor: pointer; transition: background .2s, border-color .2s; min-height: 88px; display: grid; place-items: center; }
+.drop.over, .drop:hover { background: rgba(255, 255, 255, .05); border-color: var(--accent); }
+.card.despues { --accent: var(--despues); }
+.card input[type=file] { display: none; }
+.prog { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.link { background: none; border: 0; color: var(--dim); text-decoration: underline; cursor: pointer; padding: 6px 0; font-size: 14px; }
+textarea { width: 100%; min-height: 120px; resize: vertical; background: var(--ink); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; font-size: 14px; }
+.field { display: grid; gap: 6px; font-size: 13px; color: var(--dim); }
+.field input { background: var(--ink); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; min-height: 40px; font: inherit; font-size: 15px; width: 100%; }
+.priv { margin-top: 26px; color: var(--faint); font-size: 13.5px; line-height: 1.55; max-width: 40rem; }
+.err { color: #ff9c9c; font-size: 14px; }
+.toast { position: absolute; z-index: 40; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--panel2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 12px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; max-width: 90%; text-align: center; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 520px) { :root { --fs: 20px; } .ctitle { margin-top: 8px; } .meta { padding: 0 48px; } }
+@media (prefers-reduced-motion: reduce) { .sc, .sheet, .top, .bar { transition: none; } }
+</style>
+<div class="app" id="app">
+  <div class="stage" id="stage" aria-hidden="true"></div>
+  <div class="veil" aria-hidden="true"></div>
+
+  <header class="top">
+    <button class="ibtn" id="btn-toc" aria-label="Contenido"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+    <div class="mid" id="hdr"></div>
+    <button class="ibtn" id="btn-set" aria-label="Ajustes de lectura"><svg viewBox="0 0 24 24"><path d="M3 18l5-12 5 12M5 14h6M15 18l3.5-8 3.5 8M16.3 15h4.4"/></svg></button>
+  </header>
+
+  <main class="reader" id="reader" tabindex="-1"></main>
+
+  <footer class="bar" id="bar">
+    <div class="bar-in">
+      <button class="ibtn" id="prev" aria-label="Página anterior"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="slider">
+        <div class="ticks" id="ticks"></div>
+        <input type="range" id="range" min="0" max="1" value="0" step="1" aria-label="Ir a una página">
+        <div class="read" id="read"></div>
+      </div>
+      <button class="ibtn" id="next" aria-label="Página siguiente"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="meta" id="meta"></div>
+  </footer>
+
+  <div class="sheet-bg" id="sheet-bg"></div>
+
+  <aside class="sheet left" id="toc" aria-label="Contenido">
+    <div class="sh-head"><h2>Contenido</h2><button class="ibtn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sh-body" id="toc-body"></div>
+  </aside>
+
+  <aside class="sheet right" id="settings" aria-label="Ajustes">
+    <div class="sh-head"><h2>Lectura</h2><button class="ibtn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sh-body">
+      <div class="set-row"><div class="lbl">Tamaño de letra <b id="v-fs"></b></div><input type="range" id="set-fs" min="16" max="34" step="1" aria-label="Tamaño de letra"></div>
+      <div class="set-row"><div class="lbl">Espacio entre líneas</div>
+        <div class="seg" id="set-lh"><button data-v="1.55">Justo</button><button data-v="1.75">Normal</button><button data-v="2">Amplio</button></div></div>
+      <div class="set-row"><div class="lbl">Oscuridad sobre el fondo <b id="v-veil"></b></div><input type="range" id="set-veil" min="55" max="95" step="1" aria-label="Oscuridad del fondo"></div>
+      <div class="set-row"><label for="set-scenes">Mostrar fondos de escena <span class="sw"><input type="checkbox" id="set-scenes"><i></i></span></label></div>
+      <div class="set-row"><label for="set-names">Mostrar quién habla <span class="sw"><input type="checkbox" id="set-names"><i></i></span></label></div>
+      <div class="set-row"><button class="btn" id="btn-lib">Cargar o cambiar libros</button></div>
+    </div>
+  </aside>
+
+  <section class="loader" id="loader" hidden>
+    <div class="ld">
+      <h1><em>Antes</em> y <span>Después</span> de Diciembre</h1>
+      <p class="lead">Un lector para seguir la historia en modo oscuro: capítulos cortados por escena, diálogos con el nombre de quien habla y un fondo distinto según el lugar. Cargá tu archivo y empezá donde quieras.</p>
+      <div class="cards">
+        <div class="card antes" id="card-antes">
+          <h2>Primera parte</h2><div class="t">Antes de diciembre</div><div class="st">Todavía sin cargar</div>
+          <label class="drop"><input type="file" accept=".pdf,.txt,application/pdf,text/plain"><span>Tocá para elegir el PDF o TXT<br><small>o arrastralo hasta acá</small></span></label>
+          <div class="prog" hidden><i></i></div><div class="err"></div>
+          <div class="row"><button class="link" data-paste>Pegar el texto</button><button class="link" data-del hidden>Quitar</button></div>
+          <div class="paste" hidden><textarea placeholder="Pegá acá el texto del libro"></textarea><button class="btn" data-usepaste style="margin-top:8px">Usar este texto</button></div>
+        </div>
+        <div class="card despues" id="card-despues">
+          <h2>Segunda parte</h2><div class="t">Después de diciembre</div><div class="st">Todavía sin cargar</div>
+          <label class="drop"><input type="file" accept=".pdf,.txt,application/pdf,text/plain"><span>Tocá para elegir el PDF o TXT<br><small>o arrastralo hasta acá</small></span></label>
+          <div class="prog" hidden><i></i></div><div class="err"></div>
+          <div class="row"><button class="link" data-paste>Pegar el texto</button><button class="link" data-del hidden>Quitar</button></div>
+          <div class="paste" hidden><textarea placeholder="Pegá acá el texto del libro"></textarea><button class="btn" data-usepaste style="margin-top:8px">Usar este texto</button></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:22px">
+        <label class="field" style="max-width:260px">La historia la cuenta (nombre)<input id="ld-narr" value="Jenna" autocomplete="off"></label>
+      </div>
+      <div class="row" style="margin-top:18px">
+        <button class="btn pri" id="btn-read" disabled>Empezar a leer</button>
+        <button class="link" id="btn-sample">Ver una muestra corta</button>
+      </div>
+      <p class="priv">El archivo se lee en tu dispositivo y no se sube a ningún lado. Quién habla en las líneas sin aclaración es una estimación, y esos nombres se ven un poco más tenues. Los capítulos y los lugares también se detectan solos, así que pueden fallar alguna vez.</p>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status"></div>
+</div>
+
+<script>/* core.js — lee el texto, detecta capítulos, notas, personajes y quién habla.
+   Todo corre en el dispositivo; no usa red. */
+const Core = (() => {
+'use strict';
+
+const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const SENT_END = /[.!?…:"”»)\]*]$/;
+const CAP_WORD = /[A-ZÁÉÍÓÚÑ][a-záéíóúñü]{2,}/g;
+
+/* ============ 1. PDF / TXT -> párrafos ============ */
+
+function pageLines(items) {
+  const lines = [];
+  for (const it of items) {
+    if (typeof it.str !== 'string') continue;
+    const y = it.transform[5], x = it.transform[4];
+    const last = lines[lines.length - 1];
+    if (last && Math.abs(last.y - y) < 2.5) { last.text += it.str; last.x = Math.min(last.x, x); }
+    else lines.push({ y, x, text: it.str });
+  }
+  const out = lines.map(l => ({ y: l.y, x: l.x, text: l.text.replace(/\s+/g, ' ').trim() })).filter(l => l.text);
+  // números de página sueltos arriba o abajo
+  while (out.length && /^\d{1,4}$/.test(out[0].text)) out.shift();
+  while (out.length && /^\d{1,4}$/.test(out[out.length - 1].text)) out.pop();
+  return out;
+}
+
+function baseGap(pages) {
+  const gaps = [];
+  for (const ls of pages) for (let i = 1; i < ls.length; i++) {
+    const g = ls[i - 1].y - ls[i].y;
+    if (g > 1) gaps.push(g);
+  }
+  if (!gaps.length) return 12;
+  gaps.sort((a, b) => a - b);
+  return gaps[Math.floor(gaps.length * 0.2)];
+}
+
+function joinLines(arr) {
+  let s = '';
+  for (const t of arr) {
+    if (!s) { s = t; continue; }
+    if (/[a-záéíóúñ]-$/.test(s) && /^[a-záéíóúñ]/.test(t)) s = s.slice(0, -1) + t;
+    else s += ' ' + t;
+  }
+  return s.trim();
+}
+
+function pagesToParas(pages) {
+  const base = baseGap(pages);
+  const thr = base * 1.35;
+  const perPage = pages.map(ls => {
+    const paras = []; let cur = [];
+    ls.forEach((l, i) => {
+      if (i > 0 && ls[i - 1].y - l.y > thr) { paras.push(joinLines(cur)); cur = []; }
+      cur.push(l.text);
+    });
+    if (cur.length) paras.push(joinLines(cur));
+    return paras;
+  });
+  return mergePages(perPage);
+}
+
+const isHeadingish = t => RE_CHAPTER.test(t) || RE_BREAK.test(t) || RE_SPECIAL.test(t);
+
+function mergePages(perPage) {
+  const out = [];
+  let carry = false;
+  for (const paras of perPage) {
+    paras.forEach((p, i) => {
+      if (i === 0 && out.length) {
+        const prev = out[out.length - 1];
+        const cont = !isHeadingish(prev) && !isHeadingish(p) &&
+          ((!SENT_END.test(prev) && !/[—–]$/.test(prev) ) || /^[a-záéíóúñ,;]/.test(p));
+        if (cont) { out[out.length - 1] = joinLines([prev, p]); return; }
+      }
+      out.push(p);
+    });
+  }
+  return out;
+}
+
+async function extractPdf(pdf, onProgress) {
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    pages.push(pageLines(tc.items));
+    page.cleanup();
+    if (onProgress && (i % 4 === 0 || i === pdf.numPages)) { onProgress(i, pdf.numPages); await new Promise(r => setTimeout(r, 0)); }
+  }
+  return pagesToParas(pages);
+}
+
+function textToParas(raw) {
+  const t = raw.replace(/\r\n?/g, '\n').replace(/ /g, ' ');
+  const lines = t.split('\n');
+  const blanks = lines.filter(l => !l.trim()).length;
+  if (blanks / Math.max(1, lines.length) < 0.08) {
+    return lines.map(l => l.trim()).filter(Boolean);
+  }
+  return t.split(/\n\s*\n+/).map(b => joinLines(b.split('\n').map(x => x.trim()).filter(Boolean))).filter(Boolean);
+}
+
+/* ============ 2. Estructura ============ */
+
+const RE_CHAPTER = /^(?:cap[ií]tulo|cap\.)\s+([0-9]+|[a-záéíóúñ]+)\b\s*(?:[-–—:.]\s*(.{0,60}))?$/i;
+const RE_SPECIAL = /^(pr[oó]logo|ep[ií]logo|sinopsis|extra|especial)\b.{0,40}$/i;
+const RE_BREAK = /^(?:\*\s*){3,}$|^[-–—_=~#•·]{3,}$/;
+const RE_META = /^(published|source|fecha de publicaci[oó]n|https?:\/\/|www\.|libro\s+\d+\s*:)/i;
+const RE_TAG = /^(?:mini-?\s*)?marat[oó]n\b.{0,20}$|^(?:pen)?[uú]ltimo cap[ií]tulo\b.{0,20}$|^cap[ií]tulo (?:final|extra)\b.{0,20}$/i;
+const RE_NOTE_START = /^\*?\s*(pausa para aplausos|nota(?: de (?:la )?autora)?\b|n\/a\b|a\/n\b)/i;
+const RE_NOTE_CUE = /(?:\s|^)(?::D|D:|XD|:3|:\)|:\()(?:\s|$|[.!?])|\bwattpad\b|\bPD\d?:|besoo|\bos (?:lo|he|dejo|informar[eé])\b|vosotr/i;
+const RE_DIALOG = /^[—–]\s*\S/;
+
+function buildBook(paras, opts = {}) {
+  const narrator = opts.narrator || 'Jenna';
+  const narratorAliases = (opts.aliases || ['Jenna', 'Jen', 'Jenny', 'Jennifer']).map(fold);
+  narratorAliases.push(fold(narrator));
+
+  // --- portada
+  const firstChap = paras.findIndex(p => p.length < 100 && RE_CHAPTER.test(p));
+  const headEnd = firstChap < 0 ? 0 : firstChap;
+  const front = paras.slice(0, headEnd).filter(p => !RE_META.test(p));
+  let title = '', author = '';
+  if (front.length && front[0].length < 90) title = front.shift();
+  if (front.length && front[0].length < 60 && !SENT_END.test(front[0])) author = front.shift();
+
+  const chapters = [];
+  const mk = (label, num, tag) => ({ label, num, tag: tag || '', paras: [] });
+  let cur = null;
+  if (firstChap < 0) {
+    cur = mk('Lectura', null); chapters.push(cur);
+    front.forEach(t => cur.paras.push({ text: t }));
+  } else if (front.length) {
+    cur = mk('Sinopsis', 0); chapters.push(cur);
+    front.forEach(t => cur.paras.push({ text: t }));
+  }
+  for (let i = headEnd; i < paras.length; i++) {
+    const t = paras[i];
+    if (RE_META.test(t)) continue;
+    let m;
+    if (t.length < 100 && (m = t.match(RE_CHAPTER))) {
+      const n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : null;
+      cur = mk('Capítulo ' + m[1], n, (m[2] || '').trim());
+      chapters.push(cur);
+      continue;
+    }
+    if (t.length < 60 && RE_SPECIAL.test(t) && !RE_DIALOG.test(t)) {
+      cur = mk(t.replace(/^./, c => c.toUpperCase()), null);
+      chapters.push(cur); continue;
+    }
+    if (!cur) { cur = mk('Lectura', null); chapters.push(cur); }
+    cur.paras.push({ text: t });
+  }
+
+  // --- etiquetas bajo el título, cortes, notas
+  for (const ch of chapters) {
+    const keep = []; let inNote = false;
+    ch.paras.forEach((p, idx) => {
+      const t = p.text;
+      if (idx < 3 && t.length < 45 && RE_TAG.test(t)) { ch.tag = ch.tag ? ch.tag + ' · ' + t : t; return; }
+      if (RE_BREAK.test(t)) { keep.push({ k: 'break', text: '' }); return; }
+      if (t.length < 40 && RE_NOTE_START.test(t)) inNote = true;
+      if (inNote || RE_NOTE_CUE.test(t) || /^[↑↓]/.test(t)) { keep.push({ k: 'note', text: t.replace(/^\*+|\*+$/g, '') }); return; }
+      keep.push({ k: RE_DIALOG.test(t) ? 'd' : 'n', text: t });
+    });
+    ch.paras = keep;
+  }
+  const book = { title, author, chapters, narrator, extraNames: opts.names || [] };
+  detectCharacters(book, narratorAliases, narrator);
+  chapters.forEach(ch => assignSpeakers(ch.paras, book));
+  return book;
+}
+
+/* ============ 3. Personajes y quién habla ============ */
+
+const NAME_STOP = new Set(['Navidad','Universidad','Dios','Francia','Europa','España','Disney','Brown','Crush','Mujer','Maravilla','Biscuit','Pumba','Thor','Mushu','Nemo','Candy','Buscando','León','Bella','Halloween','Gracias','Wattpad','Instagram','Facebook','Netflix','Google','Madre','Papá','Mamá','Señor','Señora','Hola','Vale','Claro','Bueno','Pues','Sin','Pero','Nada','Nunca','Siempre','Jamás','También','Entonces','Después','Antes','Quizá','Tal','Eso','Esto','Esta','Este','Aquí','Allí','Ahora','Luego','Ojalá','Mira','Venga','Dime','Oye','Perdón','Lo','Los','Las','Una','Uno','Que','Qué','Cómo','Dónde','Quién','Cuándo','Por','Para','Con','Del','Todo','Todos','Todas','Algo','Alguien','Nadie','Cuando','Mientras','Aunque','Como','Sí','No']);
+
+function splitDialog(text) {
+  const parts = text.split(/[—–]/);
+  const speech = [], attr = [];
+  for (let i = 1; i < parts.length; i++) (i % 2 ? speech : attr).push(parts[i]);
+  return { speech: speech.join(' '), attr };
+}
+
+function detectCharacters(book, aliasesFolded, narrator) {
+  const inAttr = new Map(), freq = new Map();
+  for (const ch of book.chapters) for (const p of ch.paras) {
+    if (p.k === 'd') {
+      for (const a of splitDialog(p.text).attr) for (const m of a.matchAll(CAP_WORD)) inAttr.set(m[0], (inAttr.get(m[0]) || 0) + 1);
+    }
+    if (p.k === 'd' || p.k === 'n') {
+      for (const m of p.text.matchAll(/(?<=[a-záéíóúñ,;] )([A-ZÁÉÍÓÚÑ][a-záéíóúñü]{2,})\b/g)) freq.set(m[1], (freq.get(m[1]) || 0) + 1);
+    }
+  }
+  const names = new Set();
+  for (const [n, c] of inAttr) if (!NAME_STOP.has(n) && c >= 2 && (freq.get(n) || 0) >= 4) names.add(n);
+  for (const [n, c] of freq) if (!NAME_STOP.has(n) && c >= 25 && (inAttr.get(n) || 0) >= 1) names.add(n);
+  const alias = new Map();
+  for (const a of aliasesFolded) alias.set(a, narrator);
+  for (const n of [...names]) if (alias.has(fold(n))) names.delete(n);
+  (book.extraNames || []).forEach(n => names.add(n));
+  book.names = names;
+  book.alias = alias;
+}
+
+const OBJ_PREP = new Set(['a', 'con', 'de', 'hacia', 'para', 'ante', 'sobre', 'por', 'sin', 'entre', 'contra', 'desde', 'como', 'y', 'e', 'que', 'ni']);
+const NOT_1P = new Set(['cafe','bebe','sofa','asi','aqui','alli','ahi','si','mi','ti','ni','te','que','de','se','me','le','sale','pie','fe','ve','vale','tal','alla','aca','bue','buen','ay','hoy','muy','tambien','jamas','quiza','mama','papa']);
+
+function wordsOf(s) { return s.match(/[A-Za-zÁÉÍÓÚÑáéíóúñü]+/g) || []; }
+
+/** Busca el sujeto que habla dentro de un trozo corto de narración/atribución. */
+function subjectIn(text, book, maxWords = 14) {
+  const toks = wordsOf(text).slice(0, maxWords);
+  for (let i = 0; i < toks.length; i++) {
+    const w = toks[i], f = fold(w);
+    const isName = book.names.has(w) || book.alias.has(f);
+    if (!isName) continue;
+    const prev = i > 0 ? fold(toks[i - 1]) : '';
+    if (OBJ_PREP.has(prev) && prev !== 'y' && prev !== 'e') continue; // "mirando a Ross" no habla Ross
+    return book.alias.get(f) || w;
+  }
+  return null;
+}
+
+function firstPerson(text) {
+  const toks = wordsOf(text).slice(0, 4).map(fold);
+  for (const t of toks) {
+    if (NOT_1P.has(t)) continue;
+    if (/^(dije|conteste|respondi|pregunte|murmure|susurre|anadi|sonrei|rei|suspire|grite|proteste|replique|comente|aclare|asegure|insisti|explique|admiti|confese|negue|asenti|resople|bufe|sugeri|advertí|musite|solte|bromee|mentí|corregi|recorde|pedi|apunte|jadee|chille|balbucee|farfulle|conteste)$/.test(t)) return true;
+    if (/(?:e|i)$/.test(t) && t.length > 3 && /^[a-z]+(?:[ei])$/.test(t) && /(?:é|í)/.test(text.slice(0, 40).normalize('NFC')) ) {
+      // verbo en pretérito de 1ª persona (acentuado)
+      const raw = wordsOf(text).slice(0, 4).find(x => fold(x) === t);
+      if (raw && /[éí]$/.test(raw)) return true;
+    }
+  }
+  return false;
+}
+
+function thirdPersonVerb(text) {
+  const toks = wordsOf(text).slice(0, 3);
+  return toks.some(t => /[ó]$/.test(t) || /^(dijo|rio|rió|dijeron|sonrio)$/i.test(t));
+}
+
+/** quién actúa en un párrafo de narración (para saber quién habla después) */
+function beatOf(text, book) {
+  const head = text.slice(0, 120);
+  const who = subjectIn(head, book, 7);
+  if (who) return who;
+  const toks = wordsOf(head).slice(0, 3).map(fold);
+  if (!toks.length) return null;
+  if (/^(me|mi|mis|yo|nos)$/.test(toks[0]) || firstPerson(head)) return 'ME';
+  if (/^(el|ella|ellos|ellas)$/.test(toks[0]) || thirdPersonVerb(head)) return 'OTHER';
+  return null;
+}
+
+function vocatives(speech, book) {
+  const set = new Set();
+  for (const m of speech.matchAll(/(?:^|[,¿¡.!?]\s*)([A-ZÁÉÍÓÚÑ][a-záéíóúñü]{2,})\s*[,.!?]|,\s*([A-ZÁÉÍÓÚÑ][a-záéíóúñü]{2,})\s*(?:[.!?]|$)/g)) {
+    const w = m[1] || m[2];
+    if (!w) continue;
+    const f = fold(w);
+    if (book.alias.has(f)) set.add(book.narrator); else if (book.names.has(w)) set.add(w);
+  }
+  return set;
+}
+
+function assignSpeakers(paras, book) {
+  let seg = [];
+  const flush = () => { if (seg.length) solveSegment(seg, book); seg = []; };
+  for (const p of paras) { if (p.k === 'break') flush(); else seg.push(p); }
+  flush();
+}
+
+/* Cadena oculta de Markov: cada línea de diálogo es un estado (quién habla).
+   Las atribuciones explícitas fijan el estado; el resto se completa con las
+   probabilidades de alternancia medidas en el propio libro. */
+function solveSegment(seg, book) {
+  const narr = book.narrator;
+  const lines = [];
+  let gap = null, beat = null;
+  for (const p of seg) {
+    if (p.k === 'note') continue;
+    if (p.k === 'n') { gap = (gap === null ? 1 : gap + 1); beat = beatOf(p.text, book); continue; }
+    const { speech, attr } = splitDialog(p.text);
+    let anchor = null, attrOther = false;
+    if (!p._mask) {
+      for (const a of attr) {
+        const s = subjectIn(a, book, 10);
+        if (s) { anchor = s; break; }
+        if (firstPerson(a)) { anchor = narr; break; }
+        if (thirdPersonVerb(a)) attrOther = true;
+      }
+    }
+    lines.push({ p, gap: lines.length ? (gap || 0) : null, beat: (gap ? beat : null), anchor, attrOther, voc: vocatives(speech, book) });
+    gap = 0; beat = null;
+  }
+  if (!lines.length) return;
+
+  // estados posibles
+  const cnt = new Map();
+  const bump = (n, w) => { if (n && n !== narr) cnt.set(n, (cnt.get(n) || 0) + w); };
+  lines.forEach(l => { bump(l.anchor, 3); l.voc.forEach(v => bump(v, 1)); if (l.beat && l.beat !== 'ME' && l.beat !== 'OTHER') bump(l.beat, 1); });
+  const states = [narr, ...[...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7).map(e => e[0])];
+  const S = states.length, NI = 0;
+  if (S === 1) { lines.forEach(l => { l.p.who = narr; l.p.guess = !l.anchor; if (l.anchor) l.p.exp = true; }); return; }
+
+  const trans = (a, b, l) => {
+    const seq = l.gap === 0, bt = l.beat, named = bt && bt !== 'ME' && bt !== 'OTHER';
+    const w = new Array(S).fill(0);
+    for (let j = 0; j < S; j++) {
+      const st = states[j];
+      if (a === narr) {
+        w[j] = st === narr ? (seq ? 0.12 : 0.31) : (seq ? 0.88 : 0.69) / (S - 1);
+        if (!seq && st === narr && bt === 'ME') w[j] *= 1.4;
+        if (!seq && st === narr && (bt === 'OTHER' || named)) w[j] *= 0.7;
+        if (named && st === bt) w[j] *= 1.5;
+      } else {
+        if (st === narr) w[j] = seq ? 0.60 : 0.42;
+        else if (st === a) w[j] = seq ? 0.15 : 0.43;
+        else w[j] = (seq ? 0.25 : 0.15) / Math.max(1, S - 2);
+        if (!seq) {
+          if (st === a && (bt === 'OTHER' || bt === a)) w[j] *= 1.3;
+          if (st === narr && (bt === 'OTHER' || bt === a)) w[j] *= 0.8;
+          if (st === narr && (bt === 'ME' || bt === null)) w[j] *= 1.25;
+          if (st === a && bt === 'ME') w[j] *= 0.9;
+          if (named && bt !== a && st === bt) w[j] *= 1.4;
+        }
+      }
+    }
+    const sum = w.reduce((x, y) => x + y, 0);
+    return w.map(x => Math.log(x / sum + 1e-9));
+  };
+  // quién está "presente" cerca de cada línea (anclas, vocativos y narración en ±W líneas)
+  const W = 7;
+  const near = lines.map((_, i) => {
+    const set = new Set([narr]);
+    for (let j = Math.max(0, i - W); j <= Math.min(lines.length - 1, i + W); j++) {
+      const q = lines[j];
+      if (q.anchor) set.add(q.anchor);
+      q.voc.forEach(v => set.add(v));
+      if (q.beat && q.beat !== 'ME' && q.beat !== 'OTHER') set.add(q.beat);
+    }
+    return set;
+  });
+  lines.forEach((l, i) => { l.near = near[i]; });
+  const emit = (l, st) => {
+    let e = 1;
+    if (l.anchor) return st === l.anchor ? 0 : -14;
+    if (!l.near.has(st)) e *= 0.06;
+    if (l.voc.has(st)) e *= 0.12;
+    if (l.attrOther && st === narr) e *= 0.08;
+    if (l.gap && l.beat === 'ME' && st === narr) e *= 1.2;
+    return Math.log(e);
+  };
+
+  // Viterbi
+  const dp = [], bp = [];
+  dp[0] = states.map((st, j) => {
+    const l = lines[0];
+    let prior = j === 0 ? 0.5 : 0.5 / (S - 1);
+    if (l.beat && l.beat !== 'ME' && l.beat !== 'OTHER' && st === l.beat) prior *= 2;
+    return Math.log(prior) + emit(l, st);
+  });
+  for (let i = 1; i < lines.length; i++) {
+    dp[i] = new Array(S).fill(-Infinity); bp[i] = new Array(S).fill(0);
+    for (let a = 0; a < S; a++) {
+      const tr = trans(states[a], null, lines[i]);
+      for (let b = 0; b < S; b++) {
+        const v = dp[i - 1][a] + tr[b] + emit(lines[i], states[b]);
+        if (v > dp[i][b]) { dp[i][b] = v; bp[i][b] = a; }
+      }
+    }
+  }
+  let k = 0;
+  for (let j = 1; j < S; j++) if (dp[lines.length - 1][j] > dp[lines.length - 1][k]) k = j;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i];
+    l.p.who = states[k]; l.p.guess = !l.anchor; if (l.anchor) l.p.exp = true; l.p.via = 'hmm';
+    if (i > 0) k = bp[i][k];
+  }
+}
+
+/** Mide qué tan bien adivina sin atribuciones: oculta las atribuciones y compara con las reales. */
+function selfTest(book, every = 2) {
+  let ok = 0, n = 0, k = 0; const by = {};
+  for (const ch of book.chapters) {
+    const truth = ch.paras.map(p => p.exp ? p.who : undefined);
+    const copy = ch.paras.map(p => ({ ...p, who: undefined, via: undefined, _mask: false }));
+    copy.forEach((p, i) => { if (truth[i] && (k++ % every === 0)) p._mask = true; });
+    assignSpeakers(copy, book);
+    copy.forEach((p, i) => { if (p._mask) { n++; const v = p.via || '?'; by[v] = by[v] || { n: 0, ok: 0 }; by[v].n++; if (p.who === truth[i]) { ok++; by[v].ok++; } } });
+  }
+  return { n, ok, pct: n ? ok / n : 0, by };
+}
+
+return { _beatOf: beatOf, fold, extractPdf, pagesToParas, textToParas, buildBook, assignSpeakers, selfTest, splitDialog, RE_DIALOG };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+
+/* scenes.js — detecta el lugar de cada escena y dibuja el fondo (SVG original). */
+const Scenes = (() => {
+'use strict';
+const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/* ============ Detección de lugar ============ */
+const KINDS = {
+  dorm:      { label: 'Residencia',   tod: 'night' },
+  living:    { label: 'Salón',        tod: 'night' },
+  kitchen:   { label: 'Cocina',       tod: 'day'   },
+  bath:      { label: 'Baño',         tod: 'night' },
+  class:     { label: 'Clase',        tod: 'day'   },
+  library:   { label: 'Biblioteca',   tod: 'day'   },
+  cafe:      { label: 'Cafetería',    tod: 'day'   },
+  party:     { label: 'Fiesta',       tod: 'night' },
+  campus:    { label: 'Campus',       tod: 'day'   },
+  street:    { label: 'Calle',        tod: 'night' },
+  car:       { label: 'En el coche',  tod: 'dusk'  },
+  airport:   { label: 'Aeropuerto',   tod: 'day'   },
+  family:    { label: 'Casa familiar',tod: 'night' },
+  restaurant:{ label: 'Restaurante',  tod: 'night' },
+  cinema:    { label: 'Cine',         tod: 'night' },
+  rooftop:   { label: 'Terraza',      tod: 'night' },
+  night:     { label: '',             tod: 'night' }
+};
+
+const LEX = {
+  dorm: [['residencia',3],['habitacion',1.5],['\\bcama\\b',2],['almohada',2],['escritorio',2],['companera de habitacion',3],['\\bcuarto\\b',1.5],['armario',1],['sabanas',1.5],['pijama',1.2],['despertador',1.2],['litera',2],['dormitorio',2],['colcha|edredon|manta',1]],
+  living: [['\\bsalon\\b',3],['\\bsofa\\b',3],['sillon',2],['\\btele\\b|television',1.2],['apartamento',2],['\\bpiso\\b',0.8],['recibidor',2],['alfombra',1],['pelicula',0.8],['pizza',1],['puerta de (la )?entrada',1],['\\bcasa\\b',0.8],['mesita',1.5]],
+  kitchen: [['cocina',3],['nevera',3],['frigorifico',3],['encimera',2.5],['fregadero',2.5],['\\bhorno\\b',1.5],['microondas',2.5],['cafetera',1.5],['desayun',1.2],['\\btaza\\b',1],['sarten|olla\\b',2],['tostada|tostadora',2]],
+  bath: [['ducha',3],['\\bbano\\b',2],['banera',3],['toalla',2],['lavabo',3],['azulejo',2],['secador',1.2],['inodoro',3],['grifo',2],['espejo',1],['cepillo de dientes',2],['vapor',1]],
+  class: [['\\bclase\\b',1.6],['profesor',2],['\\baula\\b',3],['pizarra',3],['apuntes',2],['examen',2],['facultad',3],['asignatura',2],['pupitre',2.5],['conferencia',1],['tutoria',2],['catedra',2],['lingu',0.8],['exposicion',1.5],['trabajo en grupo',1.5]],
+  library: [['biblioteca',4],['estanteria',2.5],['sala de estudio',3],['\\bestudiar\\b',1],['bibliotecari',3],['silencio',0.8]],
+  cafe: [['cafeteria',4],['comedor',3],['bandeja',2],['almuerzo',2],['\\bbarra\\b',1],['cantina',3],['comida',0.8],['bocadillo|sandwich',1.5],['\\bcafe\\b',1]],
+  party: [['fiesta',3],['discoteca',4],['\\bbar\\b',2.2],['\\bcopas?\\b',2],['bailar|baile',2],['musica (muy )?alta',2.5],['cerveza',2],['borrach',2],['\\bpista\\b',2],['\\bdj\\b',2],['\\btragos?\\b',1.5],['\\bpub\\b',3],['vaso de plastico',2],['\\bshots?\\b',1.5],['ponche',1.5]],
+  campus: [['campus',3],['cesped',2.5],['jardin',1.5],['\\bparque\\b',2.5],['\\bcorrer\\b|trotar',2],['arboles?',1],['sendero',2.5],['\\bpatio\\b',1.5],['\\bbanco\\b',0.8],['fuente\\b',1],['pista de atletismo|estadio',3],['hierba',1.5]],
+  street: [['\\bcalle\\b',2],['acera',2.5],['farola',2.5],['\\bciudad\\b',1],['esquina',1.2],['semaforo',2],['autobus',2],['parada',1],['edificio',0.8],['tienda',1],['centro comercial',3],['supermercado',2.5],['\\bcentro\\b',0.6],['calzada',2]],
+  car: [['\\bcoche\\b',2.2],['conducir',2],['volante',3],['asiento (delantero|trasero)',3],['carretera',3],['cinturon',2],['maletero',2],['aparcar|aparcamiento',2],['gasolinera',3],['\\bmotor\\b',1.5],['retrovisor',3],['\\bviaje\\b',0.8]],
+  airport: [['aeropuerto',5],['\\bavion\\b',4],['\\bvuelo\\b',4],['maleta',2],['azafata',4],['embarque',4],['aterriz',3],['billete',1.5],['terminal',2],['equipaje',3],['despegar|despegue',3],['pasaporte',3],['puerta de embarque',4]],
+  family: [['padres',0.7],['\\bmama\\b|\\bmadre\\b',0.4],['\\bpapa\\b|\\bpadre\\b',0.4],['hermana|hermano',0.4],['abuela|abuelo',1.2],['familia',0.5],['casa de mis padres|casa de sus padres|casa de los padres',4],['navidad',1.5],['arbol de navidad',4],['villancico',4],['chimenea',3],['nochebuena|nochevieja',3],['pavo',1.5],['regalos',1.2],['cena de navidad',4]],
+  restaurant: [['restaurante',4],['camarero|camarera',3.5],['\\bcarta\\b',1.5],['propina',2.5],['postre',2],['\\bmenu\\b',1.5],['reserva',1.5],['\\bcena\\b',1.2],['velas?\\b',1.5],['pedimos|pedir la cuenta|la cuenta',1.5],['hamburgueseria|pizzeria|heladeria',3]],
+  cinema: [['\\bcine\\b',4],['palomitas',3.5],['butaca',3],['pantalla grande',2.5],['entradas',1.2],['sala de cine',4],['trailer',1.5]],
+  rooftop: [['azotea',4],['terraza',3.5],['balcon',3],['tejado',3],['barandilla',2.5],['escaleras de incendios',3]]
+};
+const TOD_LEX = {
+  night: [['noche',1.6],['madrugada',2.5],['\\bluna\\b',2],['oscuro|oscuridad',1],['estrellas?',2],['medianoche',3],['anochec',2.5],['luces apagadas',2],['nochebuena|nochevieja',2],['las (doce|una|dos|tres) de la (noche|madrugada)',3]],
+  dusk:  [['atardecer',3.5],['puesta de sol',3.5],['\\btarde\\b',1],['ocaso',3],['crepusculo',3]],
+  day:   [['por la manana|esa manana|de manana|la manana',1.6],['\\bsol\\b',1.2],['mediodia',2.5],['desayun',1.5],['luz del dia',2.5],['soleado',2],['amaneci|amanecer',2],['recreo',1.5],['almuerzo',1.5],['\\bclase\\b',0.6]]
+};
+const NAME_STOP = new Set(['Navidad', 'Universidad', 'Dios', 'Francia', 'Europa', 'España']);
+const compile = tbl => Object.fromEntries(Object.entries(tbl).map(([k, arr]) => [k, arr.map(([re, w]) => [new RegExp(re, 'g'), w])]));
+const CL = compile(LEX), CT = compile(TOD_LEX);
+
+function scoreText(folded, table) {
+  const out = {};
+  for (const k in table) {
+    let s = 0;
+    for (const [re, w] of table[k]) { re.lastIndex = 0; const m = folded.match(re); if (m) s += w * Math.min(m.length, 3); }
+    if (s) out[k] = s;
+  }
+  return out;
+}
+/** puntaje de lugar por párrafo (se usa para cortar escenas y para etiquetar páginas) */
+function scorePara(text) { return scoreText(fold(text), CL); }
+
+const OWNER_RE = /\b(casa|piso|apartamento|habitaci[oó]n|cuarto|dormitorio)\s+de\s+((?:mis|los|las)\s+[a-záéíóúñ]+(?:\s+de\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)?|[A-ZÁÉÍÓÚÑ][a-záéíóúñü]{2,})/g;
+function ownerOf(texts, narrator) {
+  const cnt = new Map();
+  for (const t of texts) for (const m of t.matchAll(OWNER_RE)) {
+    let who = m[2];
+    if (NAME_STOP.has(who)) continue;
+    if (/^mis\s/i.test(who)) who = 'los ' + who.replace(/^mis\s+/i, '') + ' de ' + narrator;
+    const type = /^(casa|piso|apartamento)$/i.test(m[1]) ? 'Casa' : 'Habitación';
+    const key = type + ' de ' + who;
+    cnt.set(key, (cnt.get(key) || 0) + 1);
+  }
+  let best = null, bc = 0;
+  for (const [k, c] of cnt) if (c > bc) { best = k; bc = c; }
+  return best;
+}
+
+function classify(texts, ctx = {}) {
+  const folded = fold(texts.join(' \n '));
+  const sc = scoreText(folded, CL);
+  let top = null, tv = 0;
+  for (const k in sc) if (sc[k] > tv) { top = k; tv = sc[k]; }
+  const tsc = scoreText(folded, CT);
+  let tod = null, tt = 0;
+  for (const k in tsc) if (tsc[k] > tt) { tod = k; tt = tsc[k]; }
+  const kind = (top && tv >= 3.2) ? top : (ctx.prev ? ctx.prev.kind : 'night');
+  const inherited = !(top && tv >= 3.2);
+  if (!tod || tt < 1.6) tod = inherited && ctx.prev ? ctx.prev.tod : KINDS[kind].tod;
+  if (kind === 'party' || kind === 'cinema') tod = 'night';
+  const xmas = (sc.family || 0) > 0 && /navidad|villancic|nochebuena|nieve|chimenea/.test(folded);
+  let label = KINDS[kind].label;
+  const owner = ownerOf(texts, ctx.narrator || 'Jenna');
+  if (owner && ['dorm', 'living', 'kitchen', 'bath', 'family'].includes(kind)) label = owner;
+  else if (inherited && ctx.prev && ctx.prev.kind === kind) label = ctx.prev.label || label;
+  return { kind, tod, label, xmas, score: tv, inherited };
+}
+
+/* ============ Arte (SVG original, 1600×900) ============ */
+const PAL = {
+  day:   { skyA: '#7fb0d8', skyB: '#eaf2f6', wall: '#cdc4b8', wall2: '#b4ab9d', floor: '#8d7b66', furn: '#5b5a6c', furn2: '#7d7191', lamp: '#fff0c4', ink: '#1c1c27', leaf: '#3f7a55', leaf2: '#5ea56d', ground: '#7aa566', sun: '#fff3cd' },
+  dusk:  { skyA: '#3a3270', skyB: '#f29b72', wall: '#7b6884', wall2: '#64546e', floor: '#4b3a44', furn: '#2c2640', furn2: '#493a5d', lamp: '#ffc47c', ink: '#120f1e', leaf: '#2a3a46', leaf2: '#3a4f55', ground: '#3b4a45', sun: '#ffd1a1' },
+  night: { skyA: '#070b22', skyB: '#26346a', wall: '#2b2e4c', wall2: '#202339', floor: '#181829', furn: '#14152a', furn2: '#25264a', lamp: '#ffcf86', ink: '#06060e', leaf: '#0d1f2a', leaf2: '#14303a', ground: '#0f201f', sun: '#e8ecff' }
+};
+
+let UID = 0;
+const lcg = seed => () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+const R = (x, y, w, h, f, o = 1, rx = 0) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"${o !== 1 ? ` opacity="${o}"` : ''}${rx ? ` rx="${rx}"` : ''}/>`;
+const C = (x, y, r, f, o = 1) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${f}"${o !== 1 ? ` opacity="${o}"` : ''}/>`;
+const E = (x, y, rx, ry, f, o = 1) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}"${o !== 1 ? ` opacity="${o}"` : ''}/>`;
+const P = (d, f, o = 1) => `<path d="${d}" fill="${f}"${o !== 1 ? ` opacity="${o}"` : ''}/>`;
+const POLY = (pts, f, o = 1) => `<polygon points="${pts}" fill="${f}"${o !== 1 ? ` opacity="${o}"` : ''}/>`;
+
+function mk() {
+  const defs = [];
+  const id = () => 'a' + (++UID);
+  const lin = (c1, c2, vertical = true, o1 = 1, o2 = 1) => { const i = id(); defs.push(`<linearGradient id="${i}" x1="0" y1="0" x2="${vertical ? 0 : 1}" y2="${vertical ? 1 : 0}"><stop offset="0" stop-color="${c1}" stop-opacity="${o1}"/><stop offset="1" stop-color="${c2}" stop-opacity="${o2}"/></linearGradient>`); return `url(#${i})`; };
+  const rad = (col, o = 0.9) => { const i = id(); defs.push(`<radialGradient id="${i}"><stop offset="0" stop-color="${col}" stop-opacity="${o}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>`); return `url(#${i})`; };
+  const glow = (x, y, r, col, o = 0.9) => C(x, y, r, rad(col, o));
+  return { defs, lin, rad, glow };
+}
+
+function stars(n, seed, y1 = 0, y2 = 500, col = '#fff') {
+  const r = lcg(seed); let s = '';
+  for (let i = 0; i < n; i++) s += C((r() * 1600) | 0, y1 + r() * (y2 - y1) | 0, 0.8 + r() * 1.6, col, 0.35 + r() * 0.6);
+  return s;
+}
+function skyRect(m, p, x, y, w, h, tod, seed = 7) {
+  let s = R(x, y, w, h, m.lin(p.skyA, p.skyB));
+  if (tod === 'night') { const r = lcg(seed); for (let i = 0; i < 22; i++) s += C(x + r() * w, y + r() * h * 0.8, 1 + r() * 1.4, '#fff', 0.5 + r() * 0.5); s += C(x + w * 0.78, y + h * 0.22, Math.min(w, h) * 0.07, '#f2f4ff', 0.9); }
+  if (tod === 'day') s += C(x + w * 0.75, y + h * 0.25, Math.min(w, h) * 0.09, '#fffbe6', 0.9);
+  return s;
+}
+function windowPane(m, p, tod, x, y, w, h, city = false, seed = 3) {
+  let s = R(x - 10, y - 10, w + 20, h + 20, p.furn2);
+  s += `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">` + skyRect(m, p, 0, 0, w, h, tod, seed);
+  if (city) { const r = lcg(seed + 5); let cx = 0; while (cx < w) { const bw = 40 + r() * 70, bh = 60 + r() * h * 0.5; s += R(cx, h - bh, bw, bh, p.ink, 0.85); if (tod !== 'day') for (let k = 0; k < 6; k++) s += R(cx + 8 + r() * (bw - 20), h - bh + 10 + r() * (bh - 20), 6, 8, p.lamp, 0.8); cx += bw + 4; } }
+  s += `</svg>`;
+  s += R(x + w / 2 - 4, y, 8, h, p.furn2) + R(x, y + h / 2 - 4, w, 8, p.furn2);
+  if (tod === 'night') s += R(x, y, w, h, '#0a1030', 0.12);
+  return s;
+}
+function lampGlow(m, p, x, y, r, o = 0.55) { return m.glow(x, y, r, p.lamp, o); }
+
+const ART = {
+  dorm(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    s += R(0, 690, 1600, 210, m.lin(p.floor, p.ink, true, 1, 0.6));
+    s += windowPane(m, p, tod, 640, 130, 340, 330, true, 11);
+    // cama
+    s += R(80, 430, 520, 270, p.furn2, 1, 14) + R(80, 400, 40, 300, p.furn) + R(560, 470, 40, 230, p.furn);
+    s += R(120, 520, 440, 170, m.lin('#6c7fb8', '#3d4a7a'), 1, 20) + R(140, 470, 170, 70, '#e6e1ea', 0.95, 30) + R(120, 590, 440, 28, '#fff', 0.14);
+    // escritorio y lámpara
+    s += R(1060, 520, 440, 26, p.furn) + R(1090, 546, 18, 170, p.furn) + R(1450, 546, 18, 170, p.furn);
+    s += R(1210, 400, 190, 120, p.ink, 1, 8) + R(1220, 410, 170, 100, m.lin('#6ea0ff', '#2c3f80'), 1, 4) + R(1280, 520, 50, 12, p.furn);
+    s += lampGlow(m, p, 1130, 450, 260, 0.5) + R(1124, 470, 12, 50, p.furn) + P('M1100 470 L1160 470 L1148 428 L1112 428 Z', p.lamp, 0.95);
+    // pósters y guirnalda
+    s += R(1060, 190, 90, 120, '#c98aa8', 0.55, 4) + R(1170, 210, 120, 90, '#8ac0c9', 0.5, 4) + R(1310, 180, 90, 130, '#c9b88a', 0.5, 4);
+    for (let i = 0; i < 16; i++) { const x = 90 + i * 40; s += C(x, 150 + Math.sin(i / 2.2) * 24, 6, p.lamp, 0.95) + C(x, 150 + Math.sin(i / 2.2) * 24, 22, m.rad(p.lamp, 0.35)); }
+    return s;
+  },
+  living(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    s += R(0, 700, 1600, 200, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += windowPane(m, p, tod, 1050, 120, 420, 360, true, 21);
+    s += E(700, 800, 560, 70, p.furn2, 0.55); // alfombra
+    // sofá
+    s += R(300, 520, 780, 190, p.furn2, 1, 40) + R(330, 430, 720, 150, p.furn, 1, 36) + R(270, 540, 90, 190, p.furn, 1, 36) + R(1020, 540, 90, 190, p.furn, 1, 36);
+    s += R(390, 560, 280, 100, m.lin(p.furn2, p.furn), 1, 24) + R(690, 560, 280, 100, m.lin(p.furn2, p.furn), 1, 24) + R(420, 450, 110, 90, '#8b6fb0', 0.7, 18);
+    // mesa
+    s += R(470, 745, 460, 22, p.furn) + R(500, 767, 16, 60, p.furn) + R(884, 767, 16, 60, p.furn) + R(560, 722, 70, 24, '#e9e1d0', 0.7, 6) + R(700, 718, 36, 28, p.lamp, 0.8, 6);
+    // lámpara de pie y planta
+    s += lampGlow(m, p, 150, 330, 330, 0.55) + R(144, 360, 12, 380, p.furn) + P('M95 360 L205 360 L185 270 L115 270 Z', p.lamp, 0.95) + E(150, 745, 56, 14, p.furn);
+    s += R(1490, 640, 80, 100, p.furn2, 1, 10) + P('M1530 640 C1470 560 1480 480 1530 430 C1540 500 1600 540 1530 640 Z', p.leaf2, 0.9) + P('M1530 650 C1580 580 1590 520 1560 470 C1520 520 1500 580 1530 650 Z', p.leaf, 0.9);
+    s += R(520, 140, 360, 220, p.ink, 0.55, 6) + R(532, 152, 336, 196, m.lin('#6d7fb0', '#2c3560'), 0.6, 4);
+    return s;
+  },
+  kitchen(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    s += R(0, 760, 1600, 140, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += windowPane(m, p, tod, 620, 170, 360, 230, true, 31);
+    for (let i = 0; i < 4; i++) s += R(60 + i * 140, 60, 130, 210, p.furn2, 1, 6) + R(60 + i * 140 + 55, 230, 20, 6, p.lamp, 0.8);
+    for (let i = 0; i < 4; i++) s += R(1020 + i * 140, 60, 130, 210, p.furn2, 1, 6) + R(1020 + i * 140 + 55, 230, 20, 6, p.lamp, 0.8);
+    s += R(0, 520, 1100, 36, p.furn) + R(0, 556, 1100, 210, p.furn2) ;
+    for (let i = 0; i < 7; i++) s += R(8 + i * 155, 566, 140, 190, p.furn, 0.9, 6) + R(70 + i * 155, 590, 14, 40, p.lamp, 0.4);
+    s += R(1180, 300, 240, 460, '#c9ced6', tod === 'night' ? 0.4 : 0.75, 14) + R(1180, 470, 240, 6, p.ink, 0.5) + R(1385, 340, 10, 90, p.ink, 0.5) + R(1385, 500, 10, 130, p.ink, 0.5);
+    for (const x of [300, 800, 1100]) s += lampGlow(m, p, x, 360, 220, 0.4) + R(x - 2, 0, 4, 330, p.ink, 0.6) + P(`M${x - 40} 330 L${x + 40} 330 L${x + 26} 290 L${x - 26} 290 Z`, p.lamp, 0.95);
+    s += R(160, 480, 60, 40, '#e9e1d0', 0.8, 6) + R(260, 470, 34, 50, p.lamp, 0.6, 6) + R(700, 470, 120, 50, p.ink, 0.5, 8);
+    return s;
+  },
+  bath(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    for (let x = 0; x < 1600; x += 100) s += R(x, 0, 2, 780, p.ink, 0.12);
+    for (let y = 0; y < 780; y += 100) s += R(0, y, 1600, 2, p.ink, 0.12);
+    s += R(0, 780, 1600, 120, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += R(260, 120, 420, 340, p.furn2, 1, 22) + R(280, 140, 380, 300, m.lin('#cfe1ee', '#7d94ad'), tod === 'night' ? 0.55 : 0.8, 14) + lampGlow(m, p, 470, 110, 360, 0.55) + R(300, 100, 340, 14, p.lamp, 0.95, 7);
+    s += R(240, 520, 460, 40, '#e8e6ee', 0.85, 18) + R(280, 560, 380, 220, p.furn2, 1, 6) + R(450, 450, 22, 70, '#b6bcc8', 0.9);
+    s += R(1020, 60, 460, 720, '#cfe1ee', 0.18, 8) + R(1020, 60, 460, 720, 'none', 1) + R(1015, 55, 470, 8, '#b6bcc8', 0.7) + R(1015, 775, 470, 8, '#b6bcc8', 0.7) + R(1250, 70, 10, 700, '#b6bcc8', 0.55);
+    s += m.glow(1250, 300, 330, '#ffffff', 0.35) + R(1040, 90, 200, 12, '#b6bcc8') + C(1180, 110, 22, '#b6bcc8');
+    return s;
+  },
+  class(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    s += R(0, 640, 1600, 260, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += R(380, 100, 840, 300, '#dfe5e8', tod === 'night' ? 0.45 : 0.8, 8) + R(370, 90, 860, 14, p.furn) + R(370, 396, 860, 14, p.furn);
+    for (let i = 0; i < 6; i++) s += R(430 + i * 120, 160 + (i % 2) * 50, 90, 6, p.ink, 0.35);
+    for (let i = 0; i < 3; i++) s += R(20 + i * 120, 120, 100, 340, m.lin(p.skyA, p.skyB), 0.9) + R(20 + i * 120, 120, 100, 340, 'none');
+    for (let i = 0; i < 4; i++) { const y = 540 + i * 80, k = 1 + i * 0.2, n = 5 - (i === 3 ? 0 : 0); for (let j = 0; j < 6; j++) { const x = 90 + j * 250 * k - (i * 40); s += R(x, y, 190 * k, 20 * k, p.furn2) + R(x + 12, y + 20 * k, 10 * k, 70 * k, p.furn) + R(x + 168 * k, y + 20 * k, 10 * k, 70 * k, p.furn); if ((i + j) % 3 === 0) s += C(x + 90 * k, y - 38 * k, 24 * k, p.ink, 0.9) + P(`M${x + 50 * k} ${y} Q${x + 90 * k} ${y - 62 * k} ${x + 130 * k} ${y} Z`, p.ink, 0.9); } }
+    s += m.glow(800, 90, 560, p.lamp, 0.22);
+    return s;
+  },
+  library(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall2, p.ink, true, 1, 0.9));
+    const r = lcg(41);
+    for (const [x0, w] of [[0, 380], [420, 380], [820, 380], [1220, 380]]) {
+      s += R(x0, 60, w, 700, p.furn, 1, 4);
+      for (let row = 0; row < 7; row++) { let x = x0 + 14; const y = 80 + row * 98; s += R(x0, y + 86, w, 8, p.ink, 0.6); while (x < x0 + w - 30) { const bw = 12 + r() * 22, bh = 56 + r() * 28; const hue = ['#7a4b4b', '#4b6a7a', '#7a6a4b', '#4b7a5d', '#6b4b7a', '#8a8a96'][(r() * 6) | 0]; s += R(x, y + 86 - bh, bw, bh, hue, 0.85); x += bw + 2; } }
+    }
+    s += R(0, 760, 1600, 140, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += R(200, 790, 1200, 22, p.furn2) + R(230, 812, 16, 88, p.furn2) + R(1354, 812, 16, 88, p.furn2);
+    for (const x of [420, 800, 1180]) s += lampGlow(m, p, x, 770, 200, 0.6) + R(x - 3, 730, 6, 60, p.furn) + P(`M${x - 40} 740 L${x + 40} 740 L${x + 24} 700 L${x - 24} 700 Z`, '#2c7a5d', 0.95);
+    s += R(300, 770, 120, 18, '#e9e1d0', 0.6, 3) + R(1000, 772, 90, 16, '#e9e1d0', 0.55, 3);
+    return s;
+  },
+  cafe(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    s += R(0, 700, 1600, 200, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += windowPane(m, p, tod, 120, 140, 520, 360, true, 61) + windowPane(m, p, tod, 760, 140, 520, 360, true, 62);
+    s += R(0, 520, 1600, 24, p.furn) + R(0, 544, 1600, 156, p.furn2, 0.5);
+    for (let i = 0; i < 7; i++) { const x = 130 + i * 230; s += lampGlow(m, p, x, 100, 150, 0.5) + R(x - 1, 0, 2, 70, p.ink, 0.7) + P(`M${x - 26} 84 L${x + 26} 84 L${x + 16} 52 L${x - 16} 52 Z`, p.lamp, 0.95); }
+    for (let i = 0; i < 4; i++) { const x = 200 + i * 360; s += E(x, 800, 130, 22, p.furn) + R(x - 6, 800, 12, 80, p.furn) + E(x, 880, 50, 10, p.furn) + R(x - 80, 740, 14, 70, p.furn2) + R(x + 66, 740, 14, 70, p.furn2) + R(x - 100, 720, 40, 12, p.furn2) + R(x + 60, 720, 40, 12, p.furn2) + R(x - 40, 770, 22, 22, '#e9e1d0', 0.8, 4); }
+    s += R(1380, 440, 140, 80, p.ink, 0.6, 8) + R(1390, 450, 120, 40, p.lamp, 0.4, 6);
+    return s;
+  },
+  party(m, p) {
+    let s = R(0, 0, 1600, 900, '#07060f');
+    const r = lcg(77), cols = ['#ff3d8b', '#4d6bff', '#a14dff', '#2ee6d6', '#ffb02e'];
+    for (let i = 0; i < 6; i++) { const x = 150 + i * 260, c = cols[i % 5]; s += POLY(`${x - 10},0 ${x + 10},0 ${x + 150 + (r() - 0.5) * 300},900 ${x - 150 + (r() - 0.5) * 300},900`, m.lin(c, c, true, 0.5, 0), 0.55); }
+    for (let i = 0; i < 60; i++) s += C(r() * 1600, r() * 700, 10 + r() * 50, cols[(r() * 5) | 0], 0.12 + r() * 0.18);
+    s += R(0, 760, 1600, 140, m.lin('#120a1f', '#000', true, 1, 1));
+    s += C(800, 130, 64, '#d9d9ef', 0.9) + R(798, 0, 4, 70, '#999', 0.7); for (let i = 0; i < 18; i++) s += C(800 + Math.cos(i) * 50 * r(), 130 + Math.sin(i) * 50 * r(), 3, '#fff', 0.9);
+    s += R(520, 540, 560, 90, '#0c0914', 1, 6) + R(560, 560, 480, 20, '#2ee6d6', 0.6, 4);
+    for (let i = 0; i < 22; i++) { const x = 40 + i * 72 + r() * 30, h = 150 + r() * 90, y = 900 - h; s += C(x, y - 30, 30, '#050409') + R(x - 38, y, 76, h, '#050409', 1, 30); }
+    s += R(0, 760, 1600, 140, 'none');
+    return s;
+  },
+  campus(m, p, tod) {
+    let s = skyRect(m, p, 0, 0, 1600, 560, tod, 81);
+    s += R(0, 500, 1600, 400, m.lin(p.ground, p.ink, true, 1, 0.55));
+    s += R(340, 230, 920, 290, p.furn, 1, 4) + POLY('300,240 800,110 1300,240', p.furn2);
+    for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) s += R(400 + i * 105, 290 + j * 100, 50, 70, tod === 'day' ? p.skyA : p.lamp, tod === 'day' ? 0.7 : 0.85, 3);
+    s += R(740, 400, 120, 120, p.ink, 0.8, 4);
+    const r = lcg(83);
+    for (const [x, sc] of [[120, 1.2], [260, 0.9], [1380, 1.2], [1490, 0.85], [1180, 0.8]]) s += R(x - 10 * sc, 400, 20 * sc, 150 * sc, p.ink, 0.8) + C(x, 360, 110 * sc, p.leaf) + C(x - 70 * sc, 410, 80 * sc, p.leaf2, 0.95) + C(x + 70 * sc, 410, 80 * sc, p.leaf2, 0.95);
+    s += P('M640 900 L960 900 L860 520 L740 520 Z', p.floor, 0.65);
+    s += P('M0 760 C400 700 700 700 1000 720 C1200 735 1400 780 1600 800 L1600 900 L0 900 Z', p.ground, 0.5);
+    return s;
+  },
+  street(m, p, tod) {
+    let s = skyRect(m, p, 0, 0, 1600, 600, tod, 91);
+    const r = lcg(93);
+    let x = 0; while (x < 1600) { const w = 90 + r() * 150, h = 220 + r() * 330; s += R(x, 640 - h, w, h, p.ink, 0.9); for (let k = 0; k < 14; k++) if (r() > 0.45) s += R(x + 10 + r() * (w - 28), 650 - h + 14 + r() * (h - 40), 8, 11, tod === 'day' ? '#9ec0d8' : p.lamp, 0.85); x += w + 6; }
+    s += R(0, 640, 1600, 260, m.lin('#1a1b2a', '#07070e'));
+    s += R(0, 640, 1600, 14, '#33344a', 0.9);
+    for (let i = 0; i < 6; i++) s += POLY(`${770 + i * 0},660 ${830},660 ${1000 + (i - 3) * 340},900 ${600 + (i - 3) * 340},900`, i % 2 ? '#2a2b40' : '#222336', 0.0);
+    for (let i = 0; i < 5; i++) s += P(`M${800 - 8} ${690 + i * 50} L${800 + 8} ${690 + i * 50} L${800 + 12 + i * 4} ${720 + i * 50} L${800 - 12 - i * 4} ${720 + i * 50} Z`, '#e8dca0', 0.5);
+    for (const [x0, h] of [[220, 420], [1380, 460], [620, 360], [1040, 380]]) s += lampGlow(m, p, x0, 640 - h, 190, 0.7) + R(x0 - 4, 640 - h, 8, h, p.ink) + R(x0 - 4, 640 - h, 50, 8, p.ink) + C(x0 + 44, 640 - h + 18, 12, p.lamp);
+    s += R(300, 790, 220, 50, p.furn, 1, 16) + C(340, 845, 20, p.ink) + C(480, 845, 20, p.ink) + C(500, 810, 10, '#ff6a5a', 0.9);
+    return s;
+  },
+  car(m, p) {
+    let s = R(0, 0, 1600, 900, m.lin('#10122a', '#34285a'));
+    s += POLY('0,520 1600,520 1600,900 0,900', '#0b0b14');
+    s += POLY('560,520 1040,520 1500,900 100,900', '#161625');
+    for (let i = 0; i < 6; i++) s += POLY(`${792},${540 + i * 55} ${808},${540 + i * 55} ${812 + i * 6},${560 + i * 62} ${788 - i * 6},${560 + i * 62}`, '#e8dca0', 0.55);
+    const r = lcg(97); for (let i = 0; i < 26; i++) s += C(r() * 1600, 380 + r() * 160, 4 + r() * 14, ['#ff6a5a', '#ffd070', '#fff'][(r() * 3) | 0], 0.45 + r() * 0.4) ;
+    s += R(0, 0, 1600, 120, '#05050a') + R(520, 40, 480, 120, '#0b0b14', 1, 20) + R(540, 56, 440, 88, m.lin('#252846', '#14152a'), 1, 12);
+    s += P('M0 900 L0 640 C400 600 1200 600 1600 640 L1600 900 Z', '#06060b');
+    s += E(380, 800, 250, 250, 'none') + `<circle cx="380" cy="820" r="230" fill="none" stroke="#0e0e18" stroke-width="46"/>` + R(120, 800, 520, 36, '#0e0e18');
+    s += R(760, 700, 100, 40, '#ffb02e', 0.25, 8);
+    return s;
+  },
+  airport(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall2, p.ink, true, 1, 0.9));
+    s += `<svg x="100" y="70" width="1400" height="520" viewBox="0 0 1400 520" preserveAspectRatio="xMidYMid slice">` + skyRect(m, p, 0, 0, 1400, 520, tod === 'night' ? 'night' : (tod === 'dusk' ? 'dusk' : 'day'), 101) + R(0, 400, 1400, 120, '#2a2e3a') + R(0, 460, 1400, 4, '#e8dca0', 0.5);
+    s += P('M380 330 L980 300 L1030 330 L980 345 L440 360 Z', '#e8edf5', 0.95) + P('M700 320 L810 190 L860 190 L820 322 Z', '#cfd6e2') + P('M980 300 L1010 240 L1034 240 L1030 330 Z', '#cfd6e2') + R(470, 330, 380, 5, '#7d8ba8', 0.6);
+    for (let i = 0; i < 18; i++) s += C(80 + i * 76, 470, 5, '#ffb02e', 0.9);
+    s += `</svg>`;
+    for (let i = 0; i < 5; i++) s += R(100 + i * 280 - 6, 60, 12, 540, p.furn);
+    s += R(90, 56, 1420, 16, p.furn) + R(90, 590, 1420, 16, p.furn);
+    s += R(0, 610, 1600, 290, m.lin(p.floor, p.ink, true, 1, 0.65)) + R(0, 640, 1600, 6, '#fff', 0.07);
+    for (let i = 0; i < 5; i++) s += R(180 + i * 280, 740, 200, 26, p.furn2) + R(180 + i * 280, 700, 200, 44, p.furn2, 0.9, 10) + R(190 + i * 280, 766, 10, 70, p.furn) + R(360 + i * 280, 766, 10, 70, p.furn);
+    s += R(1300, 690, 110, 140, '#4a6fa5', 0.9, 12) + R(1330, 650, 50, 44, 'none') + R(1344, 640, 22, 30, p.ink, 0.8, 4);
+    return s;
+  },
+  family(m, p, tod, xmas) {
+    let s = R(0, 0, 1600, 900, m.lin(p.wall, p.wall2));
+    s += R(0, 700, 1600, 200, m.lin(p.floor, p.ink, true, 1, 0.7));
+    s += R(0, 640, 1600, 14, p.furn, 0.6);
+    // chimenea
+    s += R(560, 360, 480, 340, p.furn2, 1, 6) + R(600, 440, 400, 260, '#0b0708', 1, 6) + R(540, 340, 520, 30, p.furn);
+    s += m.glow(800, 640, 420, '#ff8c3a', 0.55) + P('M730 700 C740 600 770 580 780 540 C800 580 830 600 840 700 Z', '#ff9d3a', 0.95) + P('M770 700 C775 640 795 630 800 600 C810 630 830 650 835 700 Z', '#ffe27a', 0.95);
+    // ventana
+    s += windowPane(m, p, 'night', 1180, 140, 300, 340, false, 111);
+    if (xmas) { const r = lcg(113); for (let i = 0; i < 40; i++) s += C(1190 + r() * 280, 150 + r() * 320, 2 + r() * 2.5, '#fff', 0.9); }
+    // sillón
+    s += R(1100, 560, 330, 140, p.furn2, 1, 36) + R(1100, 480, 330, 120, p.furn, 1, 32) + R(1080, 580, 60, 130, p.furn, 1, 24) + R(1400, 580, 60, 130, p.furn, 1, 24);
+    // árbol o librero
+    if (xmas) {
+      s += R(190, 640, 20, 70, '#3a2a22') + POLY('200,180 80,420 320,420', p.leaf2) + POLY('200,300 40,540 360,540', p.leaf2) + POLY('200,420 0,680 400,680', p.leaf2);
+      const r = lcg(115); for (let i = 0; i < 26; i++) { const y = 230 + r() * 430, half = (y - 180) * 0.5, x = 200 + (r() - 0.5) * half * 1.7; s += C(x, y, 5, ['#ff5a5a', '#ffd070', '#6ac1ff', '#fff'][(r() * 4) | 0], 0.95) + C(x, y, 16, m.rad('#ffd070', 0.25)); }
+      s += POLY('200,150 186,180 214,180', '#ffd070') + C(200, 168, 26, m.rad('#ffd070', 0.6));
+      s += R(120, 690, 70, 56, '#c0503c', 0.9) + R(228, 700, 60, 48, '#3c78c0', 0.9) + R(150, 668, 8, 22, '#ffd070', 0.9);
+      for (let i = 0; i < 12; i++) s += C(560 + i * 42, 355, 5, ['#ff5a5a', '#ffd070', '#6ac1ff'][i % 3], 0.9);
+    } else {
+      s += R(60, 120, 340, 560, p.furn, 1, 4); const r = lcg(119); for (let row = 0; row < 5; row++) { let x = 76; const y = 140 + row * 108; s += R(60, y + 92, 340, 8, p.ink, 0.5); while (x < 370) { const bw = 12 + r() * 18, bh = 50 + r() * 30; s += R(x, y + 92 - bh, bw, bh, ['#7a4b4b', '#4b6a7a', '#7a6a4b', '#4b7a5d'][(r() * 4) | 0], 0.85); x += bw + 2; } }
+    }
+    s += E(800, 810, 520, 60, p.furn2, 0.5);
+    return s;
+  },
+  restaurant(m, p, tod) {
+    let s = R(0, 0, 1600, 900, m.lin('#1a1424', '#0a0810'));
+    s += windowPane(m, p, 'night', 80, 100, 420, 420, true, 121);
+    const r = lcg(125); for (let i = 0; i < 36; i++) s += C(1000 + r() * 560, 60 + r() * 360, 8 + r() * 26, ['#ffcf86', '#ff8c6a', '#ffe9b8'][(r() * 3) | 0], 0.12 + r() * 0.2);
+    for (const [x, y] of [[420, 640], [900, 600], [1320, 680]]) {
+      s += R(x - 190, y, 380, 22, '#2b2230') + R(x - 14, y + 22, 28, 140, '#241c29') + E(x, y + 170, 90, 14, '#241c29') + R(x - 230, y - 90, 30, 190, '#2b2230', 1, 10) + R(x + 200, y - 90, 30, 190, '#2b2230', 1, 10);
+      s += m.glow(x, y - 26, 170, '#ffb86a', 0.6) + R(x - 4, y - 36, 8, 36, '#f2e8d8') + P(`M${x} ${y - 66} C${x - 12} ${y - 46} ${x - 6} ${y - 38} ${x} ${y - 36} C${x + 6} ${y - 38} ${x + 12} ${y - 46} ${x} ${y - 66} Z`, '#ffcf6a');
+      s += E(x - 90, y + 4, 38, 6, '#e9e1d0', 0.55) + E(x + 90, y + 4, 38, 6, '#e9e1d0', 0.55);
+    }
+    for (let i = 0; i < 5; i++) { const x = 560 + i * 200; s += R(x, 0, 2, 120 + (i % 2) * 40, p.ink, 0.7) + m.glow(x, 150 + (i % 2) * 40, 120, '#ffb86a', 0.55) + C(x, 150 + (i % 2) * 40, 14, '#ffd89a'); }
+    return s;
+  },
+  cinema(m, p) {
+    let s = R(0, 0, 1600, 900, '#08070c');
+    s += m.glow(800, 200, 760, '#6d8bff', 0.38) + R(340, 80, 920, 360, m.lin('#9ab4ff', '#3c4a8a'), 0.85, 8);
+    s += P('M340 440 L1260 440 L1500 700 L100 700 Z', '#0b0a14', 0.9);
+    for (let row = 0; row < 5; row++) { const y = 560 + row * 70, n = 11 - row, w = 90 + row * 14; for (let i = 0; i < 14; i++) { const x = 40 + i * (1520 / 13) - w / 2; s += R(x, y, w, 130 + row * 10, '#120f1c', 1, 22) + R(x + 6, y + 6, w - 12, 20, '#ffffff', 0.04, 8); } }
+    for (let i = 0; i < 9; i++) s += C(60 + i * 180, 520, 4, '#ffb02e', 0.8);
+    s += E(640, 780, 40, 40, '#0a0912') + E(900, 800, 40, 40, '#0a0912');
+    return s;
+  },
+  rooftop(m, p, tod) {
+    let s = skyRect(m, p, 0, 0, 1600, 720, tod, 131);
+    const r = lcg(133);
+    let x = 0; while (x < 1600) { const w = 70 + r() * 130, h = 120 + r() * 360; s += R(x, 720 - h, w, h, p.ink, 0.88); for (let k = 0; k < 16; k++) if (r() > 0.5) s += R(x + 8 + r() * (w - 20), 730 - h + 10 + r() * (h - 36), 7, 10, tod === 'day' ? '#9ec0d8' : p.lamp, 0.85); x += w + 4; }
+    s += R(0, 690, 1600, 210, m.lin(p.furn, p.ink)) + R(0, 640, 1600, 10, p.furn2) + R(0, 650, 1600, 6, p.ink, 0.5);
+    for (let i = 0; i < 32; i++) s += R(i * 52, 640, 6, 52, p.furn2);
+    for (let i = 0; i < 18; i++) { const x = 40 + i * 92, y = 110 + Math.sin(i / 2.5) * 36; s += C(x, y, 7, p.lamp, 0.95) + C(x, y, 30, m.rad(p.lamp, 0.35)); }
+    s += R(1200, 760, 280, 24, p.furn2) + R(1230, 784, 12, 80, p.furn2) + R(1440, 784, 12, 80, p.furn2);
+    return s;
+  },
+  night(m, p) {
+    let s = skyRect(m, p, 0, 0, 1600, 900, 'night', 141);
+    s += stars(80, 142, 0, 600);
+    s += P('M0 700 C240 600 480 640 760 680 C1060 720 1300 620 1600 680 L1600 900 L0 900 Z', '#0b1426') + P('M0 780 C300 720 640 760 980 800 C1240 830 1440 780 1600 790 L1600 900 L0 900 Z', '#070d1a');
+    s += m.glow(1240, 220, 300, '#9fb4ff', 0.3);
+    return s;
+  }
+};
+
+function art(kind, tod = 'night', xmas = false) {
+  const k = ART[kind] ? kind : 'night';
+  const m = mk(), p = PAL[tod] || PAL.night;
+  const body = ART[k](m, p, tod, xmas);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"><defs>${m.defs.join('')}</defs>${body}</svg>`;
+}
+
+return { KINDS, classify, scorePara, art };
+})();
+if (typeof module !== 'undefined') module.exports = Scenes;
+
+/* pages.js — corta cada capítulo en páginas donde cambia la escena. */
+const Pages = (() => {
+'use strict';
+const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+const TIME_STRONG = /^(al dia siguiente|a la manana siguiente|a la noche siguiente|al cabo de|dos dias|tres dias|unos dias|varios dias|una semana|dos semanas|esa (noche|tarde|manana)|aquella (noche|tarde|manana)|por la (manana|tarde|noche)|mas tarde|horas despues|una hora despues|media hora despues|minutos despues|unos minutos despues|el (lunes|martes|miercoles|jueves|viernes|sabado|domingo)|ese (lunes|martes|miercoles|jueves|viernes|sabado|domingo|fin de semana)|el fin de semana|el dia (siguiente|de)|habian pasado|pasaron|paso (una|un|el|la)|hacia ya (unos|dos|tres|casi|un|una)|la (manana|tarde|noche) (siguiente|del)|el resto (del dia|de la tarde))/;
+const TIME_SOFT = /^(cuando (me )?(desperte|desperto|llegue|llego|sali|salio|abri los ojos)|al (despertar|llegar|salir|abrir los ojos)|despues de (la clase|clase|comer|cenar|desayunar)|(ya )?(era|estaba) (de noche|de dia|tarde))/;
+
+const T = { target: 6500, max: 11500, min: 2600 };
+
+function topKind(sc) { let k = null, v = 0; for (const x in sc) if (sc[x] > v) { k = x; v = sc[x]; } return [k, v]; }
+
+function candidates(paras, Scenes) {
+  const n = paras.length;
+  const sc = paras.map(p => (p.k === 'note') ? {} : Scenes.scorePara(p.text));
+  const add = (a, b) => { const o = { ...a }; for (const k in b) o[k] = (o[k] || 0) + b[k]; return o; };
+  const cand = new Array(n).fill(0), why = new Array(n).fill('');
+  for (let i = 1; i < n; i++) {
+    const p = paras[i];
+    if (p.k === 'note' || paras[i - 1].k === 'note') continue;
+    let s = 0, w = '';
+    if (p.k === 'n') {
+      const f = fold(p.text.slice(0, 70)).replace(/^[^a-z0-9]+/, '');
+      if (TIME_STRONG.test(f)) { s = 62; w = 'tiempo'; } else if (TIME_SOFT.test(f)) { s = 34; w = 'tiempo-suave'; }
+    }
+    let before = {}, after = {};
+    for (let j = Math.max(0, i - 6); j < i; j++) before = add(before, sc[j]);
+    for (let j = i; j < Math.min(n, i + 6); j++) after = add(after, sc[j]);
+    const [kb, vb] = topKind(before), [ka, va] = topKind(after);
+    if (ka && kb && ka !== kb && va >= 4 && vb >= 4 && va >= (before[ka] || 0) * 1.6 && vb >= (after[kb] || 0) * 1.6) { s += 48; w += (w ? '+' : '') + 'lugar'; }
+    cand[i] = s; why[i] = w;
+  }
+  return { cand, why };
+}
+
+function splitSegment(paras, Scenes) {
+  if (!paras.length) return [];
+  const { cand, why } = candidates(paras, Scenes);
+  const len = paras.map(p => p.text.length);
+  const out = [];
+  const rec = (a, b, reason) => { // [a,b)
+    let total = 0; for (let i = a; i < b; i++) total += len[i];
+    if (total <= T.target * 1.35 && true) { out.push({ a, b, reason }); return; }
+    // buscar mejor corte
+    let cum = 0, best = -1, bestV = -1, bestS = 0;
+    for (let i = a; i < b; i++) {
+      if (i > a) {
+        const left = cum, right = total - cum;
+        if (left >= T.min && right >= T.min) {
+          const mid = 1 - Math.abs(left - total / 2) / (total / 2);
+          let v = cand[i] + 22 * mid;
+          if (paras[i - 1].k === 'n') v += 4;
+          if (paras[i - 1].k === 'd' && paras[i].k === 'd') v -= 14;
+          if (v > bestV) { bestV = v; best = i; bestS = cand[i]; }
+        }
+      }
+      cum += len[i];
+    }
+    if (best < 0) { out.push({ a, b, reason }); return; }
+    if (total <= T.max && bestS < 45) { out.push({ a, b, reason }); return; }
+    rec(a, best, reason); rec(best, b, why[best] || 'longitud');
+  };
+  rec(0, paras.length, '');
+  return out.map(o => ({ paras: paras.slice(o.a, o.b), reason: o.reason }));
+}
+
+/** books: [{ id:'antes', name:'Antes de diciembre', book }] */
+function paginate(books, Scenes) {
+  const pages = [];
+  for (const { id, name, book } of books) {
+    let prev = null;
+    book.chapters.forEach((ch, ci) => {
+      const segs = []; let cur = [];
+      for (const p of ch.paras) { if (p.k === 'break') { if (cur.length) segs.push({ ps: cur, brk: true }); cur = []; } else cur.push(p); }
+      if (cur.length) segs.push({ ps: cur, brk: false });
+      const chPages = [];
+      segs.forEach((seg, si) => {
+        const notesOnly = seg.ps.every(p => p.k === 'note');
+        const parts = notesOnly ? [{ paras: seg.ps, reason: '' }] : splitSegment(seg.ps, Scenes);
+        parts.forEach((pt, pi) => chPages.push({ paras: pt.paras, reason: pi === 0 ? (si === 0 ? 'capitulo' : 'corte') : pt.reason }));
+      });
+      // fusionar páginas diminutas (< min) con la anterior
+      const merged = [];
+      for (const pg of chPages) {
+        const size = pg.paras.reduce((s, p) => s + p.text.length, 0);
+        const isNote = pg.paras.every(p => p.k === 'note');
+        if (merged.length && size < 900 && !isNote) merged[merged.length - 1].paras.push(...pg.paras);
+        else merged.push(pg);
+      }
+      merged.forEach((pg, i) => {
+        const texts = pg.paras.filter(p => p.k !== 'note').map(p => p.text);
+        const scn = texts.length ? Scenes.classify(texts, { prev, narrator: book.narrator }) : (prev || Scenes.classify(['']));
+        prev = scn;
+        pages.push({
+          part: id, partName: name, ch: ci, chLabel: ch.label, chTag: ch.tag, chNum: ch.num,
+          i: i + 1, n: merged.length, reason: pg.reason,
+          paras: pg.paras, scene: { kind: scn.kind, tod: scn.tod, label: scn.label, xmas: scn.xmas },
+          chars: pg.paras.reduce((s, p) => s + p.text.length, 0)
+        });
+      });
+    });
+  }
+  return pages;
+}
+
+return { paginate };
+})();
+if (typeof module !== 'undefined') module.exports = Pages;
+
+window.LECTOR_SAMPLE = [
+"Muestra de prueba",
+"Texto de ejemplo",
+"Capítulo 1",
+"—¿Siempre llegás tarde a todo? —preguntó Tomás desde la puerta de mi habitación en la residencia.",
+"Dejé la mochila sobre la cama y lo miré.",
+"—Solo cuando alguien me espera —contesté.",
+"Se rió y se sentó en el borde del escritorio.",
+"—Entonces voy a esperarte siempre.",
+"—No empieces.",
+"—Es que me divierte verte enojada.",
+"Me puse el abrigo. Afuera ya era de noche y la luz de la farola entraba por la ventana.",
+"***",
+"Cuando salimos a la calle, el aire frío me golpeó la cara. Caminamos hasta la esquina sin decir nada, con las manos en los bolsillos.",
+"—Lía —dijo él, de golpe.",
+"—¿Qué?",
+"—Nada. Que me alegra que hayas venido.",
+"Sonreí sin mirarlo. Había un semáforo en rojo y ningún auto a la vista, pero esperamos igual.",
+"Capítulo 2",
+"A la mañana siguiente me desperté tarde. El sol ya iluminaba la cocina de la residencia y alguien había dejado una taza de café sobre la mesada.",
+"—Es para vos —dijo Tomás, apoyado en la nevera.",
+"—¿Te quedaste a dormir?",
+"—En el sillón del salón. Tranquila."
+].join('\n\n');
+
+window.LECTOR_PDF={main:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',worker:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'};
+/* app.js — interfaz del lector */
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const PARTS = [
+  { id: 'antes', name: 'Antes de diciembre', short: 'Antes' },
+  { id: 'despues', name: 'Después de diciembre', short: 'Después' }
+];
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } }
+};
+
+/* ---------- IndexedDB (comodidad: si falla, se vuelve a cargar el archivo) ---------- */
+const mem = new Map();
+const idb = {
+  db: null,
+  async open() {
+    if (this.db) return this.db;
+    return this.db = await new Promise((res, rej) => {
+      const r = indexedDB.open('lector-diciembre', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('books', { keyPath: 'id' });
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  async all() { try { const db = await this.open(); return await new Promise((res, rej) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return [...mem.values()]; } },
+  async put(v) { mem.set(v.id, v); try { const db = await this.open(); await new Promise((res, rej) => { const t = db.transaction('books', 'readwrite'); t.objectStore('books').put(v); t.oncomplete = res; t.onerror = () => rej(t.error); }); return true; } catch (e) { return false; } },
+  async del(id) { mem.delete(id); try { const db = await this.open(); await new Promise((res, rej) => { const t = db.transaction('books', 'readwrite'); t.objectStore('books').delete(id); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) { /* nada */ } }
+};
+
+/* ---------- estado ---------- */
+const prefs = Object.assign({ fs: 21, lh: 1.75, veil: 0.8, names: true, scenes: true, narrator: 'Jenna' }, store.get('lector.prefs', {}));
+let books = {};      // id -> { id, book, sample }
+let pages = [];
+let cur = 0;
+const app = $('#app');
+
+/* ---------- colores de personajes ---------- */
+const HUES = [206, 8, 150, 42, 285, 172, 335, 88, 240, 22, 312, 118];
+const colorCache = new Map();
+function colorOf(name) {
+  if (colorCache.has(name)) return colorCache.get(name);
+  let h = 7; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const c = `hsl(${HUES[h % HUES.length]} 72% 76%)`;
+  colorCache.set(name, c); return c;
+}
+
+/* ---------- preferencias visibles ---------- */
+function applyPrefs() {
+  const st = document.documentElement.style;
+  st.setProperty('--fs', prefs.fs + 'px'); st.setProperty('--lh', prefs.lh); st.setProperty('--veil', prefs.veil);
+  app.classList.toggle('hide-names', !prefs.names);
+  app.classList.toggle('no-scene', !prefs.scenes);
+  store.set('lector.prefs', prefs);
+}
+
+/* ---------- construir páginas ---------- */
+function rebuild() {
+  const list = PARTS.filter(p => books[p.id]).map(p => ({ id: p.id, name: p.name, book: books[p.id].book }));
+  pages = list.length ? Pages.paginate(list, Scenes) : [];
+}
+const chapterStarts = () => pages.map((p, i) => (i === 0 || pages[i - 1].part !== p.part || pages[i - 1].ch !== p.ch) ? i : -1).filter(i => i >= 0);
+
+/* ---------- escena de fondo ---------- */
+let sceneKey = '';
+function setScene(sc) {
+  const key = sc.kind + '|' + sc.tod + '|' + (sc.xmas ? 1 : 0);
+  if (key === sceneKey) return; sceneKey = key;
+  const stage = $('#stage');
+  const el = document.createElement('div'); el.className = 'sc';
+  el.innerHTML = Scenes.art(sc.kind, sc.tod, sc.xmas);
+  stage.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('on')));
+  const olds = [...stage.querySelectorAll('.sc')].filter(x => x !== el);
+  setTimeout(() => olds.forEach(o => o.remove()), 1300);
+}
+
+/* ---------- mostrar página ---------- */
+const PIN = '<svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>';
+function show(i, opts = {}) {
+  if (!pages.length) return;
+  cur = Math.max(0, Math.min(pages.length - 1, i));
+  const pg = pages[cur], rd = $('#reader');
+  app.classList.toggle('part-despues', pg.part === 'despues');
+  document.documentElement.style.setProperty('--accent', pg.part === 'despues' ? 'var(--despues)' : 'var(--antes)');
+  const loc = prefs.scenes && pg.scene.label ? `<span class="chip">${PIN}${esc(pg.scene.label)}</span>` : '';
+  const sub = [];
+  if (pg.n > 1) sub.push(`<span>Escena ${pg.i} de ${pg.n}</span>`);
+  if (loc) sub.push(loc);
+  if (pg.chTag) sub.push(`<span class="tag">${esc(pg.chTag)}</span>`);
+  const body = pg.paras.map(p => {
+    if (p.k === 'note') return `<p class="note">${esc(p.text)}</p>`;
+    if (p.k === 'd' && p.who) return `<p class="d"><span class="who${p.guess ? ' guess' : ''}" style="--c:${colorOf(p.who)}">${esc(p.who)}:</span>${esc(p.text)}</p>`;
+    return `<p>${esc(p.text)}</p>`;
+  }).join('');
+  const nxt = pages[cur + 1], prv = pages[cur - 1];
+  const nlabel = nxt ? (nxt.part !== pg.part ? 'Después de diciembre' : (nxt.ch !== pg.ch ? nxt.chLabel : `Escena ${nxt.i}`)) : '';
+  rd.innerHTML = `<article class="page">
+    <div class="eyebrow">${esc(pg.partName)}</div>
+    <h1 class="ctitle">${esc(pg.chLabel)}</h1>
+    <div class="csub">${sub.join('')}</div>
+    <div class="txt">${body}</div>
+    <div class="end"><span>Página ${cur + 1} de ${pages.length}</span>
+      <span class="row">${prv ? '<button class="btn" data-go="-1">Anterior</button>' : ''}${nxt ? `<button class="btn pri" data-go="1">${esc(nlabel)} →</button>` : '<span>Fin de lo que cargaste</span>'}</span></div>
+  </article>`;
+  rd.scrollTop = 0;
+  if (prefs.scenes) setScene(pg.scene);
+  syncBar();
+  if (!opts.silent) store.set('lector.pos', { part: pg.part, ch: pg.ch, i: pg.i });
+  $('#hdr').innerHTML = `<b>${esc(pg.chLabel)}</b> · ${esc(pg.partName)}`;
+  $('#prev').disabled = cur === 0; $('#next').disabled = cur === pages.length - 1;
+}
+
+function syncBar() {
+  const r = $('#range'); r.max = Math.max(1, pages.length - 1); r.value = cur;
+  r.style.setProperty('--p', (pages.length > 1 ? cur / (pages.length - 1) * 100 : 0) + '%');
+  const pg = pages[cur];
+  $('#meta').textContent = `Página ${cur + 1} de ${pages.length}${pg.n > 1 ? ` · escena ${pg.i}/${pg.n}` : ''}`;
+}
+function buildTicks() {
+  const t = $('#ticks'); t.innerHTML = '';
+  const N = Math.max(1, pages.length - 1);
+  chapterStarts().forEach(i => {
+    const d = document.createElement('i'); d.className = 'tick' + ((i > 0 && pages[i - 1].part !== pages[i].part) ? ' part' : '');
+    d.style.left = `calc(11px + (100% - 22px) * ${i / N})`; t.appendChild(d);
+  });
+}
+
+/* ---------- navegación ---------- */
+function go(d) { if (pages.length) show(cur + d); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]'); if (b) { go(parseInt(b.dataset.go, 10)); return; }
+  const g = e.target.closest('[data-page]'); if (g) { closeSheets(); show(parseInt(g.dataset.page, 10)); }
+});
+$('#prev').onclick = () => go(-1); $('#next').onclick = () => go(1);
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea')) { if (e.target.id !== 'range') return; }
+  if (!$('#loader').hidden) return;
+  if (e.key === 'ArrowRight' && e.target.id !== 'range') go(1);
+  else if (e.key === 'ArrowLeft' && e.target.id !== 'range') go(-1);
+  else if (e.key === 'Escape') closeSheets();
+});
+const range = $('#range'), barEl = $('#bar');
+range.addEventListener('input', () => {
+  const i = +range.value, pg = pages[i];
+  barEl.classList.add('drag');
+  range.style.setProperty('--p', (pages.length > 1 ? i / (pages.length - 1) * 100 : 0) + '%');
+  $('#read').innerHTML = `<b>${esc(pg.chLabel)}</b>${pg.n > 1 ? ` · escena ${pg.i}` : ''}${pg.scene.label ? ' · ' + esc(pg.scene.label) : ''} · pág. ${i + 1}`;
+});
+const commit = () => { barEl.classList.remove('drag'); if (+range.value !== cur) show(+range.value); };
+range.addEventListener('change', commit);
+range.addEventListener('pointerup', () => setTimeout(() => barEl.classList.remove('drag'), 400));
+
+// tocar el texto muestra/oculta la barra; deslizar cambia de página
+const rdr = $('#reader');
+let sx = 0, sy = 0, st = 0;
+rdr.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; st = Date.now(); });
+rdr.addEventListener('pointerup', e => {
+  const dx = e.clientX - sx, dy = e.clientY - sy;
+  if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 2.2 && Date.now() - st < 700) { go(dx < 0 ? 1 : -1); return; }
+  if (Math.abs(dx) < 6 && Math.abs(dy) < 6 && !e.target.closest('button') && !String(getSelection()).length) app.classList.toggle('chrome-hidden');
+});
+
+/* ---------- paneles ---------- */
+const bg = $('#sheet-bg');
+function openSheet(id) { closeSheets(); $('#' + id).classList.add('on'); bg.classList.add('on'); if (id === 'toc') renderToc(); }
+function closeSheets() { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on')); bg.classList.remove('on'); }
+bg.onclick = closeSheets;
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
+$('#btn-toc').onclick = () => openSheet('toc');
+$('#btn-set').onclick = () => openSheet('settings');
+$('#btn-lib').onclick = () => { closeSheets(); openLoader(); };
+
+function renderToc() {
+  const el = $('#toc-body'); let h = '';
+  const chap = chapterStarts();
+  for (const part of PARTS) {
+    const has = pages.some(p => p.part === part.id);
+    h += `<div class="toc-part ${part.id}"><span>${esc(part.name)}</span>${has ? '' : '<button data-lib>Cargar</button>'}</div>`;
+    if (!has) { h += '<div class="empty-note">Todavía no cargaste este libro.</div>'; continue; }
+    chap.filter(i => pages[i].part === part.id).forEach(i => {
+      const pg = pages[i];
+      const inCh = pages.map((p, k) => (p.part === pg.part && p.ch === pg.ch) ? k : -1).filter(k => k >= 0);
+      const isCur = inCh.includes(cur);
+      h += `<button class="toc-ch${isCur ? ' cur' : ''}" data-page="${i}"><span class="n">${esc(pg.chLabel)}${pg.chTag ? ` <small class="s">· ${esc(pg.chTag)}</small>` : ''}</span><span class="s">${inCh.length} ${inCh.length === 1 ? 'página' : 'páginas'}</span></button>`;
+      if (inCh.length > 1) h += '<div class="toc-pg">' + inCh.map(k => `<button data-page="${k}" class="${k === cur ? 'cur' : ''}" aria-label="Página ${k + 1}">${k + 1}</button>`).join('') + '</div>';
+    });
+  }
+  el.innerHTML = h;
+  el.querySelectorAll('[data-lib]').forEach(b => b.onclick = () => { closeSheets(); openLoader(); });
+  const c = el.querySelector('.toc-ch.cur'); if (c) c.scrollIntoView({ block: 'center' });
+}
+
+/* ---------- ajustes ---------- */
+function bindSettings() {
+  const fs = $('#set-fs'), veil = $('#set-veil');
+  fs.value = prefs.fs; veil.value = Math.round(prefs.veil * 100);
+  const upd = () => { $('#v-fs').textContent = prefs.fs + ' px'; $('#v-veil').textContent = Math.round(prefs.veil * 100) + '%'; };
+  fs.oninput = () => { prefs.fs = +fs.value; applyPrefs(); upd(); };
+  veil.oninput = () => { prefs.veil = +veil.value / 100; applyPrefs(); upd(); };
+  document.querySelectorAll('#set-lh button').forEach(b => { b.classList.toggle('on', +b.dataset.v === prefs.lh); b.onclick = () => { prefs.lh = +b.dataset.v; document.querySelectorAll('#set-lh button').forEach(x => x.classList.toggle('on', x === b)); applyPrefs(); }; });
+  const nm = $('#set-names'), sc = $('#set-scenes');
+  nm.checked = prefs.names; sc.checked = prefs.scenes;
+  nm.onchange = () => { prefs.names = nm.checked; applyPrefs(); };
+  sc.onchange = () => { prefs.scenes = sc.checked; applyPrefs(); if (pages.length) { sceneKey = ''; show(cur, { silent: true }); } };
+  upd();
+}
+
+/* ---------- carga de libros ---------- */
+const loader = $('#loader');
+function openLoader() { renderLoader(); loader.hidden = false; }
+function closeLoader() { loader.hidden = true; }
+
+function renderLoader() {
+  $('#ld-narr').value = prefs.narrator;
+  PARTS.forEach(p => {
+    const b = books[p.id], card = $('#card-' + p.id);
+    const info = b ? b.book : null;
+    const caps = info ? info.chapters.filter(c => c.paras.length).length : 0;
+    card.querySelector('.st').className = 'st' + (b ? ' ok' : '');
+    card.querySelector('.st').textContent = b ? `Cargado${b.sample ? ' (muestra)' : ''} · ${caps} secciones · ${pages.filter(x => x.part === p.id).length} páginas` : 'Todavía sin cargar';
+    card.querySelector('[data-del]').hidden = !b;
+  });
+  $('#btn-read').disabled = !pages.length;
+}
+
+function showErr(id, msg) { const c = $('#card-' + id); c.querySelector('.err').textContent = msg || ''; }
+function setProg(id, f, label) {
+  const c = $('#card-' + id);
+  c.querySelector('.prog').hidden = f == null; c.querySelector('.prog i').style.width = (f || 0) * 100 + '%';
+  c.querySelector('.st').textContent = label || '';
+}
+
+function loadScriptText(text) { return new Promise((res, rej) => { const u = URL.createObjectURL(new Blob([text], { type: 'text/javascript' })); const s = document.createElement('script'); s.src = u; s.onload = () => res(); s.onerror = () => rej(new Error('No se pudo cargar el lector de PDF')); document.head.appendChild(s); }); }
+const b64 = s => { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); };
+let pdfReady = null;
+function ensurePdf() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (pdfReady) return pdfReady;
+  const cfg = window.LECTOR_PDF || {};
+  pdfReady = (async () => {
+    if (cfg.b64Main) {
+      await loadScriptText(b64(cfg.b64Main));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([b64(cfg.b64Worker)], { type: 'text/javascript' }));
+    } else {
+      await new Promise((res, rej) => { const s = document.createElement('script'); s.src = cfg.main; s.onload = res; s.onerror = () => rej(new Error('No pude descargar el lector de PDF. Revisá tu conexión o pegá el texto.')); document.head.appendChild(s); });
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = cfg.worker;
+    }
+    return window.pdfjsLib;
+  })();
+  pdfReady.catch(() => { pdfReady = null; });
+  return pdfReady;
+}
+
+const tick = () => new Promise(r => setTimeout(r, 16));
+async function ingest(slot, source) {
+  showErr(slot, '');
+  try {
+    prefs.narrator = ($('#ld-narr').value || 'Jenna').trim() || 'Jenna'; applyPrefs();
+    let paras;
+    if (typeof source === 'string') { setProg(slot, 0.1, 'Leyendo el texto…'); await tick(); paras = Core.textToParas(source); }
+    else if (/\.pdf$/i.test(source.name) || source.type === 'application/pdf') {
+      setProg(slot, 0.02, 'Preparando el lector de PDF…');
+      const lib = await ensurePdf();
+      const data = new Uint8Array(await source.arrayBuffer());
+      const pdf = await lib.getDocument({ data }).promise;
+      paras = await Core.extractPdf(pdf, (i, n) => setProg(slot, 0.05 + 0.8 * i / n, `Leyendo página ${i} de ${n}…`));
+    } else { setProg(slot, 0.1, 'Leyendo el texto…'); paras = Core.textToParas(await source.text()); }
+    if (paras.length < 20) throw new Error('No encontré texto en el archivo. Si el PDF es una foto escaneada, pasalo a texto o pegalo acá.');
+    setProg(slot, 0.9, 'Armando capítulos y diálogos…'); await tick();
+    const book = Core.buildBook(paras, { narrator: prefs.narrator });
+    // ¿lo pusiste en el lugar equivocado?
+    const t = Core.fold(book.title || '');
+    let target = slot;
+    if (/despues de diciembre/.test(t)) target = 'despues'; else if (/antes de diciembre/.test(t)) target = 'antes';
+    books[target] = { id: target, book, savedAt: Date.now() };
+    await idb.put({ id: target, book, savedAt: Date.now() });
+    setProg(slot, null, '');
+    rebuild(); buildTicks(); renderLoader();
+    if (target !== slot) toast(`Parecía ser "${PARTS.find(p => p.id === target).name}", lo puse ahí.`);
+    return target;
+  } catch (e) {
+    setProg(slot, null, ''); renderLoader(); showErr(slot, e.message || String(e)); return null;
+  }
+}
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 4200); }
+
+PARTS.forEach(p => {
+  const card = $('#card-' + p.id), input = card.querySelector('input[type=file]'), drop = card.querySelector('.drop');
+  input.onchange = async () => { if (input.files[0]) { await ingest(p.id, input.files[0]); input.value = ''; } };
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', async e => { const f = e.dataTransfer.files[0]; if (f) await ingest(p.id, f); });
+  const ta = card.querySelector('textarea'), pasteBox = card.querySelector('.paste');
+  card.querySelector('[data-paste]').onclick = () => { pasteBox.hidden = !pasteBox.hidden; };
+  card.querySelector('[data-usepaste]').onclick = async () => { if (ta.value.trim().length > 200) { await ingest(p.id, ta.value); ta.value = ''; pasteBox.hidden = true; } else showErr(p.id, 'Pegá el texto completo del libro (o al menos varios capítulos).'); };
+  card.querySelector('[data-del]').onclick = async () => { delete books[p.id]; await idb.del(p.id); rebuild(); buildTicks(); renderLoader(); if (pages.length) show(0, { silent: true }); };
+});
+
+$('#btn-read').onclick = () => {
+  closeLoader();
+  const pos = store.get('lector.pos', null);
+  let idx = 0;
+  if (pos) { const k = pages.findIndex(p => p.part === pos.part && p.ch === pos.ch && p.i === pos.i); if (k >= 0) idx = k; }
+  buildTicks(); show(idx);
+};
+$('#btn-sample').onclick = async () => {
+  const id = books.antes && !books.antes.sample ? 'despues' : 'antes';
+  if (books[id] && !books[id].sample) return;
+  const book = Core.buildBook(Core.textToParas(window.LECTOR_SAMPLE), { narrator: 'Lía', aliases: ['Lía'], names: ['Tomás'] });
+  books[id] = { id, book, sample: true };
+  rebuild(); buildTicks(); closeLoader(); show(0, { silent: true });
+};
+
+/* ---------- arranque ---------- */
+(async function boot() {
+  applyPrefs(); bindSettings();
+  const saved = await idb.all();
+  for (const r of saved) if (r && r.book) {
+    // los libros guardados se reconstruyen sin volver a leer el PDF
+    r.book.names = new Set(r.book.names || []); r.book.alias = new Map(r.book.alias || []);
+    books[r.id] = r;
+  }
+  rebuild(); buildTicks();
+  if (pages.length) {
+    const pos = store.get('lector.pos', null);
+    let idx = 0; if (pos) { const k = pages.findIndex(p => p.part === pos.part && p.ch === pos.ch && p.i === pos.i); if (k >= 0) idx = k; }
+    show(idx, { silent: true }); closeLoader();
+  } else openLoader();
+})();
+
+// el libro guardado necesita serializar Set/Map
+const _put = idb.put.bind(idb);
+idb.put = v => _put({ ...v, book: { ...v.book, names: [...v.book.names], alias: [...v.book.alias] } });
+})();
+</script>
+
+</body></html>
